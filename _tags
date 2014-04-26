@@ -1,0 +1,6 @@
+#OASIS_START
+#OASIS_STOP
+true: debug, annot, warn(+a-4), use_menhir
+<src/gdbmi_types.ml>: syntax_camlp4o, pkg_deriving.syntax
+<src/gdbmi.ml>: syntax_camlp4o, pkg_lwt.syntax
+<src/*.mly>: explain

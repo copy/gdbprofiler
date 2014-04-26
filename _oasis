@@ -1,0 +1,19 @@
+OASISFormat: 0.4
+Name:        gdbmi
+Version:     1
+Authors:     ygrek
+License:     LGPL-2.1 with OCaml linking exception
+Plugins:     DevFiles (0.4)
+BuildTools:  ocamlbuild
+
+Synopsis:    GDB Machine Interface
+
+Executable gdbmi
+  Path: src/
+  MainIs: gdbmi.ml
+  CompiledObject: best
+  BuildTools: menhir
+  BuildDepends: extlib, lwt.unix, menhir, deriving
+
+Test unit
+  Command: $gdbmi -test
