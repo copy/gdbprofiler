@@ -29,7 +29,7 @@ type output_record =
 | Result of gtoken * result
 deriving (Show)
 
-type input_type = MI | CLI
+type input_type = MI of gtoken | CLI
 deriving (Show)
 
 type input_output = Prompt | Input of input_type | Output of output_record

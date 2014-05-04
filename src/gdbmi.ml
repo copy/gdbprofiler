@@ -5,11 +5,10 @@ open Gdbmi_types
 
 external (|>) : 'a -> ('a -> 'b) -> 'b = "%revapply"
 external (@@) : ('a -> 'b) -> 'a -> 'b = "%apply"
+let (!!) = Lazy.force
 
 let eprintfn fmt = Printf.ksprintf prerr_endline fmt
 let printfn fmt = Printf.ksprintf print_endline fmt
-
-let dump = ref false
 
 let is_alnum = function
 | 'a'..'z' -> true
@@ -29,14 +28,29 @@ let handle_parser_error line exn =
    eprintfn "  at: %s%s" tok (String.slice ~last:32 tail);
   | _ -> raise exn
 
+let dump_file_final = "pmp.txt"
+let dump_file_temp = "." ^ dump_file_final
+let dump_ch = lazy (open_out dump_file_temp)
+
+let record s =
+  output_string !!dump_ch (s ^ "\n")
+
+let dump_record () =
+  if Lazy.is_val dump_ch then
+  begin
+(*     U.fsync !!dump_ch; *)
+    close_out !!dump_ch;
+    Sys.rename dump_file_temp dump_file_final;
+  end
+
 let send_command gdb s =
-  if !dump then print_endline s;
+  record s;
   Lwt_io.write_line gdb#stdin s
 
 let read_input gdb =
   let rec loop acc =
     lwt s = try_lwt Lwt_io.read_line gdb#stdout with End_of_file -> Lwt.return "(gdb)" in (* timeout? *)
-    if !dump then print_endline s;
+    record s;
     match String.strip s with
     | "" -> loop acc
     | "(gdb)" -> Lwt.return @@ List.rev acc
@@ -111,6 +125,8 @@ let run gdb s =
   | true -> Lwt.return ()
   | false -> assert false 
 
+let run gdb fmt = ksprintf (run gdb) fmt
+
 (*
   if ( targ ~ /[<\\(]/ && targ !~ /^operator[<\\(]/ ) {
      # Shorten C++ templates, e.g. in t/samples/stacktrace-004.txt
@@ -166,22 +182,26 @@ let analyze h =
   |> List.sort ~cmp:(fun (_,a) (_,b) -> compare a b)
   |> List.iter (fun (frames,n) -> printfn "%4d %s" n (String.concat " " @@ List.map show_frame_function frames))
 
+let sample gdb =
+  gdb#kill Sys.sigint;
+  lwt _lines = execute gdb "" in (* read notifications TODO check stopped *)
+(*     List.iter (fun r -> print_endline @@ string_of_output_record r) lines; *)
+  lwt frames = stack_list_frames gdb in
+  lwt () = run gdb "continue" in (* TODO check running *)
+  Lwt.return frames
+
 let pmp pid =
   lwt gdb = launch () in
-  let run fmt = ksprintf (run gdb) fmt in
-  lwt () = run "attach %d" pid in
+  lwt () = run gdb "attach %d" pid in
+  lwt () = run gdb "continue" in
   let h = Hashtbl.create 10 in
   let t = Unix.gettimeofday () in
   lwt () = while_lwt Unix.gettimeofday () -. t < 10. do
-    lwt () = run "continue" in (* TODO check running *)
-    lwt () = Lwt_unix.sleep 0.05 in
-    gdb#kill Sys.sigint;
-    lwt _lines = execute gdb "" in (* read notifications TODO check stopped *)
-(*     List.iter (fun r -> print_endline @@ string_of_output_record r) lines; *)
-    lwt frames = stack_list_frames gdb in
+    lwt frames = sample gdb in
     Hashtbl.replace h frames @@ Hashtbl.find_default h frames 0 + 1;
-    Lwt.return ()
+    Lwt_unix.sleep 0.05
   done in
+  dump_record ();
   analyze h;
   Lwt.return ()
 

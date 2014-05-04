@@ -21,7 +21,7 @@ input_output:
 | output { Output $1 }
 
 input_prefix:
-| token=TOKEN? MINUS { MI }
+| token=TOKEN? MINUS { MI token }
 | IDENT { CLI }
 
 output: output_record EOF { $1 }
