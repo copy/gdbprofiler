@@ -13,7 +13,7 @@ Executable gdbmi
   MainIs: gdbmi.ml
   CompiledObject: best
   BuildTools: menhir
-  BuildDepends: extlib, lwt.unix, menhir, deriving
+  BuildDepends: extlib, lwt.unix, deriving, lambda-term
 
 Test unit
   Command: $gdbmi -test

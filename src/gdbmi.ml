@@ -7,8 +7,9 @@ external (|>) : 'a -> ('a -> 'b) -> 'b = "%revapply"
 external (@@) : ('a -> 'b) -> 'a -> 'b = "%apply"
 let (!!) = Lazy.force
 
-let eprintfn fmt = Printf.ksprintf prerr_endline fmt
-let printfn fmt = Printf.ksprintf print_endline fmt
+let eprintfn fmt = ksprintf prerr_endline fmt
+let printfn fmt = ksprintf print_endline fmt
+let lwt_fail fmt = ksprintf (fun s -> Lwt.fail (Failure s)) fmt
 
 let is_alnum = function
 | 'a'..'z' -> true
@@ -28,29 +29,21 @@ let handle_parser_error line exn =
    eprintfn "  at: %s%s" tok (String.slice ~last:32 tail);
   | _ -> raise exn
 
+type gdb = { proc : Lwt_process.process; mutable index : int; dump : out_channel Lazy.t; }
+
 let dump_file_final = "pmp.txt"
 let dump_file_temp = "." ^ dump_file_final
-let dump_ch = lazy (open_out dump_file_temp)
 
-let record s =
-  output_string !!dump_ch (s ^ "\n")
-
-let dump_record () =
-  if Lazy.is_val dump_ch then
-  begin
-(*     U.fsync !!dump_ch; *)
-    close_out !!dump_ch;
-    Sys.rename dump_file_temp dump_file_final;
-  end
+let record gdb s = fprintf !!(gdb.dump) "%s\n%!" s
 
 let send_command gdb s =
-  record s;
-  Lwt_io.write_line gdb#stdin s
+  record gdb s;
+  Lwt_io.write_line gdb.proc#stdin s
 
 let read_input gdb =
   let rec loop acc =
-    lwt s = try_lwt Lwt_io.read_line gdb#stdout with End_of_file -> Lwt.return "(gdb)" in (* timeout? *)
-    record s;
+    lwt s = try_lwt Lwt_io.read_line gdb.proc#stdout with End_of_file -> Lwt.return "(gdb)" in (* timeout? *)
+    record gdb s;
     match String.strip s with
     | "" -> loop acc
     | "(gdb)" -> Lwt.return @@ List.rev acc
@@ -60,18 +53,29 @@ let read_input gdb =
   in
   loop []
 
-let launch () =
-  let gdb = Lwt_process.open_process ("",[|"gdb"; "--interpreter=mi"|]) in
-  lwt _greeting = read_input gdb in
-  Lwt.return gdb
-
 let execute gdb s = send_command gdb s >> read_input gdb
 
-let index = ref 0
+let launch () =
+  let proc = Lwt_process.open_process ("",[|"gdb"; "--interpreter=mi"|]) in
+  let gdb = { proc; index = 0; dump = lazy (open_out dump_file_temp); } in
+  lwt _greeting = read_input gdb in
+(*   lwt _ = execute gdb "shell date" in (* FIXME shell *) *)
+  Lwt.return gdb
+
+let quit gdb = (* FIXME wait -> timeout -> kill *)
+  let finish_dump () =
+    if Lazy.is_val gdb.dump then
+    begin
+  (*     U.fsync !!(gdb.dump); *)
+      close_out !!(gdb.dump);
+      Sys.rename dump_file_temp dump_file_final;
+    end
+  in
+  execute gdb "quit" >> (finish_dump (); Lwt.return gdb.proc#terminate)
 
 let mi gdb s =
-  incr index;
-  let token = sprintf "%d" !index in
+  gdb.index <- gdb.index + 1;
+  let token = sprintf "%d" gdb.index in
   lwt () = send_command gdb @@ sprintf "%s-%s" token s in
   let rec loop () =
     lwt r = read_input gdb in (* skip until token matches *)
@@ -91,13 +95,8 @@ type frame = {
   line : int option;
 }
 
-let list = function List x -> x | _ -> assert false
-let string = function String x -> x | _ -> assert false
-let int = function String x -> int_of_string x | _ -> assert false
-let assoc map k l = map @@ List.assoc k l
-let assoc_opt map k l = try Some (assoc map k l) with Not_found -> None
-
 let extract_stack_frames x =
+  let open Gdbmi_utils in
   x |> List.assoc "stack"
   |> list
   |> List.filter_map (function ("frame", Tuple l) -> Some l | _ -> None)
@@ -119,11 +118,14 @@ let stack_list_frames gdb =
     Lwt.return @@ extract_stack_frames x
   | x -> eprintfn "stack-list-frames error result: %s" (string_of_result x); Lwt.return []
 
-let run gdb s =
-  lwt r = execute gdb s in
-  match List.exists (function Result (_,Done _) -> true | _ -> false) r with
-  | true -> Lwt.return ()
-  | false -> assert false 
+let run gdb cmd =
+  lwt r = execute gdb cmd in
+  match List.filter_map (function Result (_,r) -> Some r | _ -> None) r with
+  | [] -> lwt_fail "no result from %S" cmd
+  | _::_::_ -> lwt_fail "multiple results from %S" cmd
+  | [Done _] -> Lwt.return ()
+  | [OpError (err,_)] -> lwt_fail "error from %S : %s" cmd err
+  | [_] -> lwt_fail "unexpected error from %S" cmd
 
 let run gdb fmt = ksprintf (run gdb) fmt
 
@@ -176,34 +178,63 @@ let show_frame_function r =
     end
   | s -> demangle s
 
+(** @return most frequent first *)
 let analyze h =
   h |> Hashtbl.enum
   |> List.of_enum
-  |> List.sort ~cmp:(fun (_,a) (_,b) -> compare a b)
-  |> List.iter (fun (frames,n) -> printfn "%4d %s" n (String.concat " " @@ List.map show_frame_function frames))
+  |> List.sort ~cmp:(fun (_,a) (_,b) -> compare b a)
+  |> List.map (fun (frames,n) -> sprintf "%4d %s" n (String.concat " " @@ List.map show_frame_function frames))
 
 let sample gdb =
-  gdb#kill Sys.sigint;
+  gdb.proc#kill Sys.sigint;
   lwt _lines = execute gdb "" in (* read notifications TODO check stopped *)
 (*     List.iter (fun r -> print_endline @@ string_of_output_record r) lines; *)
-  lwt frames = stack_list_frames gdb in
-  lwt () = run gdb "continue" in (* TODO check running *)
-  Lwt.return frames
+  stack_list_frames gdb
+
+let display term h =
+  LTerm.goto term { LTerm_geom.row = 0; col = 0; }
+  >> Lwt_list.iter_s (LTerm.fprintl term) @@ analyze h
+
+let is_exit_key key =
+  let open LTerm_key in
+  let module C = CamomileLibraryDefault.Camomile.UChar in
+  match code key with
+  | Escape -> true
+  | Char ch when C.char_of ch = 'q' -> true
+  | Char ch when control key && C.char_of ch = 'c' -> true
+  | _ -> false
 
 let pmp pid =
   lwt gdb = launch () in
-  lwt () = run gdb "attach %d" pid in
-  lwt () = run gdb "continue" in
-  let h = Hashtbl.create 10 in
-  let t = Unix.gettimeofday () in
-  lwt () = while_lwt Unix.gettimeofday () -. t < 10. do
-    lwt frames = sample gdb in
-    Hashtbl.replace h frames @@ Hashtbl.find_default h frames 0 + 1;
-    Lwt_unix.sleep 0.05
-  done in
-  dump_record ();
-  analyze h;
-  Lwt.return ()
+  try_lwt
+    lwt term = Lazy.force LTerm.stdout in
+    lwt mode = LTerm.enter_raw_mode term in
+  try_lwt
+    lwt () = run gdb "attach %d" pid in
+    lwt () = LTerm.clear_screen term in
+    let h = Hashtbl.create 10 in
+    let should_exit = ref false in
+    let rec loop_sampling () =
+      match !should_exit with
+      | true -> Lwt.return ()
+      | false ->
+      lwt () = run gdb "continue" in (* TODO check running *)
+      lwt () = Lwt_unix.sleep 0.05 in
+      lwt frames = sample gdb in
+      Hashtbl.replace h frames @@ Hashtbl.find_default h frames 0 + 1;
+      lwt () = display term h in
+      loop_sampling ()
+    in
+    let rec loop_user () =
+      match_lwt LTerm.read_event term with
+      | LTerm_event.Key key when is_exit_key key -> should_exit := true; Lwt.return ()
+      | _ -> loop_user ()
+    in
+    Lwt.join [loop_user (); loop_sampling ()]
+  finally
+    LTerm.leave_raw_mode term mode
+  finally
+    quit gdb
 
 let dump_file file =
   let parse_line s =
@@ -238,12 +269,12 @@ let read_file file =
     with exn -> handle_parser_error s exn
   in
   lwt () = Lwt_io.lines_of_file file |> Lwt_stream.iter parse_line in
-  analyze h;
+  List.iter print_endline @@ List.rev @@ analyze h;
   Lwt.return ()
 
 let () =
   match List.tl @@ Array.to_list Sys.argv with
-  | ["pmp";pid] -> Lwt_main.run @@ pmp (int_of_string pid)
+  | ["top";pid] -> Lwt_main.run @@ pmp (int_of_string pid)
   | ["dump";file] -> Lwt_main.run @@ dump_file file
   | ["read";file] -> Lwt_main.run @@ read_file file
   | _ -> assert false
