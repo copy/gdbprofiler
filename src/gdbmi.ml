@@ -91,19 +91,12 @@ let mi gdb s =
   in
   loop ()
 
-let extract_stack_frames x =
-  let open Gdbmi_utils in
-  x |> List.assoc "stack"
-  |> list
-  |> List.filter_map (function ("frame", Tuple l) -> Some l | _ -> None)
-  |> List.map Gdbmi_proto.frame
+let make_command cmd unpack gdb =
+  match_lwt mi gdb cmd with
+  | Done [x] -> Lwt.wrap1 unpack x
+  | x -> eprintfn "%s error result: %s" cmd (string_of_result x); Lwt.return []
 
-let stack_list_frames gdb =
-  match_lwt mi gdb "stack-list-frames" with
-  | Done x ->
-(*     print_endline @@ string_of_value @@ Tuple x; *)
-    Lwt.return @@ extract_stack_frames x
-  | x -> eprintfn "stack-list-frames error result: %s" (string_of_result x); Lwt.return []
+let stack_list_frames = make_command "stack-list-frames" Gdbmi_proto.stack
 
 let run gdb cmd =
   lwt r = execute gdb cmd in
@@ -158,7 +151,7 @@ let demangle s =
 
 let show_frame_function r =
   let open Gdbmi_proto in
-  match r.func with
+  match (r:frame).func with
   | "??" -> (* use name of library *)
     begin match r.from with
     | None | Some "" -> r.func
@@ -247,9 +240,9 @@ let read_file file =
       | "" -> ()
       | s ->
         match Parser.parse_io s with
-        | Output (Result (_, Done x)) ->
+        | Output (Result (_, Done [x])) ->
           begin try
-            let frames = extract_stack_frames x in
+            let frames = Gdbmi_proto.stack x in
             Hashtbl.replace h frames @@ Hashtbl.find_default h frames 0 + 1
           with _ -> () (* no stack frames here *)
           end
