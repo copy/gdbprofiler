@@ -11,6 +11,12 @@ let eprintfn fmt = ksprintf prerr_endline fmt
 let printfn fmt = ksprintf print_endline fmt
 let lwt_fail fmt = ksprintf (fun s -> Lwt.fail (Failure s)) fmt
 
+module Parser = struct
+let make f s = Parser_utils.parse_buf_exn (f Gdbmi_lexer.ruleMain) (Lexing.from_string s)
+let parse_output = make Gdbmi_parser.output
+let parse_io = make Gdbmi_parser.input_output
+end
+
 let is_alnum = function
 | 'a'..'z' -> true
 | 'A'..'Z' -> true
@@ -85,31 +91,12 @@ let mi gdb s =
   in
   loop ()
 
-type frame = {
-  level : int;
-  addr : string;
-  func : string;
-  from : string option; (* binary *)
-  file : string option; (* source *)
-  fullname : string option;
-  line : int option;
-}
-
 let extract_stack_frames x =
   let open Gdbmi_utils in
   x |> List.assoc "stack"
   |> list
   |> List.filter_map (function ("frame", Tuple l) -> Some l | _ -> None)
-  |> List.map begin fun t ->
-    { level = assoc int "level" t;
-      addr = assoc string "addr" t;
-      func = assoc string "func" t;
-      from = assoc_opt string "from" t;
-      file = assoc_opt string "file" t;
-      fullname = assoc_opt string "fullname" t;
-      line = assoc_opt int "line" t;
-    }
-  end
+  |> List.map Gdbmi_proto.frame
 
 let stack_list_frames gdb =
   match_lwt mi gdb "stack-list-frames" with
@@ -170,6 +157,7 @@ let demangle s =
     truncate_at s "@@"
 
 let show_frame_function r =
+  let open Gdbmi_proto in
   match r.func with
   | "??" -> (* use name of library *)
     begin match r.from with

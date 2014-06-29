@@ -4,4 +4,6 @@
 <src/gdbmi_types.ml>: syntax_camlp4o, pkg_deriving.syntax
 <src/gdbmi.ml>: syntax_camlp4o, pkg_lwt.syntax
 <src/*.mly>: explain
-true: debug, annot, warn(+a-4), use_menhir
+true: use_menhir
+true: debug, annot, warn(+a-4)
+<src/gdbmi_proto.ml>: ppx

@@ -15,5 +15,12 @@ Executable gdbmi
   BuildTools: menhir
   BuildDepends: extlib, lwt.unix, deriving, lambda-term
 
+Executable ppx_inject
+  Path: ppx/
+  Build: false
+  MainIs: ppx_inject.ml
+  CompiledObject: byte
+  BuildDepends: ppx_tools
+
 Test unit
   Command: $gdbmi -test

@@ -3,7 +3,7 @@
 */
 
 %{
-  open Gdbmi_types
+  open! Gdbmi_types
 %}
 
 %token <string> IDENT TOKEN STRING
