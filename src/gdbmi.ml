@@ -113,7 +113,7 @@ let list f k acc l =
 
 let unpack1 f = function [x] -> f x | _ -> invalid_arg "return"
 let unpack0 = function [] -> () | _ -> invalid_arg "unit"
-let make unpack cmd = (fun (gdb,args) -> make_command gdb cmd unpack args)
+let make unpack cmd = (fun (gdb,args) -> make_command gdb cmd unpack @@ List.rev args)
 
 let unit name = make unpack0 name
 let ret typ name = make (unpack1 typ) name
