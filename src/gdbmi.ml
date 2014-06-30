@@ -79,10 +79,10 @@ let quit gdb = (* FIXME wait -> timeout -> kill *)
   in
   execute gdb "quit" >> (finish_dump (); Lwt.return gdb.proc#terminate)
 
-let mi gdb s =
+let mi gdb s args =
   gdb.index <- gdb.index + 1;
   let token = sprintf "%d" gdb.index in
-  lwt () = send_command gdb @@ sprintf "%s-%s" token s in
+  lwt () = send_command gdb @@ String.concat " " (sprintf "%s-%s" token s :: args) in
   let rec loop () =
     lwt r = read_input gdb in (* skip until token matches *)
     match List.filter_map (function Result (Some x,r) when x = token -> Some r | _ -> None) r with
@@ -91,12 +91,53 @@ let mi gdb s =
   in
   loop ()
 
-let make_command cmd unpack gdb =
-  match_lwt mi gdb cmd with
-  | Done [x] -> Lwt.wrap1 unpack x
-  | x -> eprintfn "%s error result: %s" cmd (string_of_result x); Lwt.return []
+let make_command gdb cmd unpack args =
+  match_lwt mi gdb cmd args with
+  | Done l -> Lwt.wrap1 unpack l
+  | x -> Lwt.fail @@ Failure (sprintf "%s error result: %s" cmd (string_of_result x))
 
-let stack_list_frames = make_command "stack-list-frames" Gdbmi_proto.stack
+module Unparse = struct
+
+let zero k gdb = k (gdb,[])
+let one f k (gdb,acc) x = k (gdb,(f x :: acc))
+let int k acc x = one string_of_int k acc x
+let string k acc x = one (sprintf "%S") k acc x
+(* let list f k acc l = k (List.concat (List.map (f (fun x -> x) []) l @ acc)) *)
+let list f k acc l =
+  let rec loop k l acc =
+    match l with
+    | [] -> k acc
+    | x::xs -> f (loop k xs) acc x
+  in
+  loop k l acc
+
+let unpack1 f = function [x] -> f x | _ -> invalid_arg "return"
+let unpack0 = function [] -> () | _ -> invalid_arg "unit"
+let make unpack cmd = (fun (gdb,args) -> make_command gdb cmd unpack args)
+
+let unit name = make unpack0 name
+let ret typ name = make (unpack1 typ) name
+let (<=) func f = zero @@ f func
+let ( * ) g f x = g @@ f x
+let none x = x
+
+end
+
+module Cmd = struct
+
+open! Unparse
+
+module P = Gdbmi_proto
+
+let stack_list_frames = ret P.stack "stack-list-frames" <= none
+let break_after = unit "break-after" <= int * int
+let break_list = ret P.breakpoint_table "break-list" <= none
+let break_disable = unit "break-disable" <= list int
+let break_enable = unit "break-enable" <= list int
+let break_delete = unit "break-delete" <= list int
+let break_commands = unit "break-commands" <= int * list string
+
+end
 
 let run gdb cmd =
   lwt r = execute gdb cmd in
@@ -170,7 +211,7 @@ let sample gdb =
   gdb.proc#kill Sys.sigint;
   lwt _lines = execute gdb "" in (* read notifications TODO check stopped *)
 (*     List.iter (fun r -> print_endline @@ string_of_output_record r) lines; *)
-  stack_list_frames gdb
+  Cmd.stack_list_frames gdb
 
 let display term h =
   LTerm.goto term { LTerm_geom.row = 0; col = 0; }
