@@ -14,7 +14,7 @@ type stack = frame list [@@inject]
 
 type bkpt = {
   number : int;
-  typ : string;
+  typ [@name "type"] : string;
   disp : string;
   enabled : string;
   addr : int;
@@ -23,7 +23,7 @@ type bkpt = {
   fullname : string option;
   line : int option;
   cond : int option;
-  thread_groups : string values;
+  thread_groups [@name "thread-groups"] : string values;
   times : int;
   ignore : int option;
 } [@@inject]
@@ -40,4 +40,4 @@ type breakpoint_table = {
   nr_cols : int;
   hdr : col_desc values;
   body : bkpt list;
-} [@@inject] [@@inject_name "BreakpointTable"]
+} [@@inject] [@@name "BreakpointTable"]

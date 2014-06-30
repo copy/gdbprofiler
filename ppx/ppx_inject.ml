@@ -20,21 +20,20 @@ let rec extract typ loc =
   | Some (constr, [t]) -> app (evar constr) [extract t loc]
   | _ -> fatal loc "extract: unsupported type"
 
-let fix_assoc_name = function
-| "thread_groups" -> "thread-groups"
-| "typ" -> "type"
-| s -> s
+let make_name def attr =
+  (* check for name override *)
+  match find_attr_expr "name" attr with
+  | Some x -> x
+  | None -> str def
 
-let assoc name typ loc var =
-  app (extract typ loc) [app (evar "List.assoc") [str (fix_assoc_name name); var]]
-
-let make_field name typ loc =
+let make_field {pld_name; pld_loc; pld_type; pld_attributes; _}  =
+  let name = make_name pld_name.txt pld_attributes in
   let func =
-    match get_constr typ with
-    | Some ("option", [t]) -> app (evar "assoc_map") [extract t loc; str name; evar "x"]
-    | _ -> assoc name typ loc (evar "x")
+    match get_constr pld_type with
+    | Some ("option", [t]) -> app (evar "assoc_map") [extract t pld_loc; name; evar "x"]
+    | _ -> app (extract pld_type pld_loc) [app (evar "List.assoc") [name; evar "x"]]
   in
-  (name, func)
+  (pld_name.txt, func)
 
 let gen_builder tdecl =
   let make_func body =
@@ -42,12 +41,7 @@ let gen_builder tdecl =
       match find_attr_expr "inject" tdecl.ptype_attributes with
       | Some x when get_lid x = Some "unnamed" -> body
       | _ -> (* this type is represented as name-value pair *)
-        let name =
-          (* check for name override *)
-          match find_attr_expr "inject_name" tdecl.ptype_attributes with
-          | Some x -> x
-          | None -> str tdecl.ptype_name.txt
-        in
+        let name = make_name tdecl.ptype_name.txt tdecl.ptype_attributes in
         let unwrapped_x = app (evar "named") [name; evar "x"] in
         let_in [Vb.mk (pvar "x") unwrapped_x] body
     in
@@ -55,8 +49,7 @@ let gen_builder tdecl =
   in
   match has_attr "inject" tdecl.ptype_attributes, tdecl.ptype_kind, tdecl.ptype_manifest with
   | true, Ptype_record fields, _ ->
-      let field pld = make_field pld.pld_name.txt pld.pld_type pld.pld_loc in
-      let fields = List.map field fields in
+      let fields = List.map make_field fields in
       [make_func @@ let_in [Vb.mk (pvar "x") (app (evar "tuple") [evar "x"])] (record fields)]
   | true, Ptype_abstract, Some ty ->
       [make_func @@ app (extract ty tdecl.ptype_loc) [evar "x"]]
