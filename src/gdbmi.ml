@@ -171,6 +171,7 @@ let replace_all str sub by =
 
 let is_number s = try ignore (int_of_string s); true with _ -> false
 let truncate_at s sub = try fst @@ String.split s sub with _ -> s
+let drop_prefix s pre = if String.starts_with s pre then String.slice ~first:(String.length pre) s else s
 
 let demangle s =
   if String.starts_with s "caml" && not (String.starts_with s "caml_") then
@@ -196,7 +197,7 @@ let show_frame_function r =
   | "??" -> (* use name of library *)
     begin match r.from with
     | None | Some "" -> r.func
-    | Some so -> (truncate_at (Filename.basename so) ".") ^ "::??"
+    | Some so -> (drop_prefix (truncate_at (Filename.basename so) ".") "lib") ^ "::??"
     end
   | s -> demangle s
 
@@ -214,8 +215,14 @@ let sample gdb =
   Cmd.stack_list_frames gdb
 
 let display term h =
-  LTerm.goto term { LTerm_geom.row = 0; col = 0; }
-  >> Lwt_list.iter_s (LTerm.fprintl term) @@ analyze h
+  let open LTerm_geom in
+  let {rows;cols} = LTerm.size term in
+  let line s = 
+    let s = if String.length s > cols then String.slice ~last:(cols - 2) s ^ " >" else s in
+    LTerm.fprintl term s
+  in
+  lwt () = LTerm.goto term { row = 0; col = 0; } in
+  Lwt_list.iter_s line @@ List.take (rows - 1) @@ analyze h
 
 let is_exit_key key =
   let open LTerm_key in
@@ -226,14 +233,18 @@ let is_exit_key key =
   | Char ch when control key && C.char_of ch = 'c' -> true
   | _ -> false
 
+let init_term () =
+  lwt term = Lazy.force LTerm.stdout in
+  lwt () = LTerm.clear_screen term in
+  Lwt.return term
+
 let pmp pid =
   lwt gdb = launch () in
   try_lwt
-    lwt term = Lazy.force LTerm.stdout in
+    lwt term = init_term () in
     lwt mode = LTerm.enter_raw_mode term in
   try_lwt
     lwt () = run gdb "attach %d" pid in
-    lwt () = LTerm.clear_screen term in
     let h = Hashtbl.create 10 in
     let should_exit = ref false in
     let rec loop_sampling () =
@@ -290,8 +301,10 @@ let read_file file =
         | _ -> ()
     with exn -> handle_parser_error s exn
   in
+  lwt term = init_term () in
   lwt () = Lwt_io.lines_of_file file |> Lwt_stream.iter parse_line in
-  List.iter print_endline @@ List.rev @@ analyze h;
+(*   List.iter print_endline @@ List.rev @@ analyze h; *)
+  lwt () = display term h in
   Lwt.return ()
 
 let () =
