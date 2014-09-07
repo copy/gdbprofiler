@@ -2,9 +2,9 @@
 #OASIS_STOP
 <src/gdbmi_parser.ml>: warn(-45)
 <src/gdbmi_types.ml>: syntax_camlp4o, pkg_deriving.syntax
-<src/gdbmi.ml>: syntax_camlp4o, pkg_lwt.syntax, warn(-42)
+<src/gdb.ml> or <src/pmpi.ml>: syntax_camlp4o, pkg_lwt.syntax, warn(-42)
 <src/*.mly>: explain
 true: use_menhir
-true: debug, annot, warn(+a-4)
+true: debug, annot, warn(+a-4-40)
 <src/gdbmi_proto.ml>: ppx
 #"src/gdbmi_proto.ml": dsource

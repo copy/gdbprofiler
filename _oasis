@@ -1,5 +1,5 @@
 OASISFormat: 0.4
-Name:        gdbmi
+Name:        gdb
 Version:     1
 Authors:     ygrek
 License:     LGPL-2.1 with OCaml linking exception
@@ -8,12 +8,17 @@ BuildTools:  ocamlbuild
 
 Synopsis:    GDB Machine Interface
 
-Executable gdbmi
+Library gdb
   Path: src/
-  MainIs: gdbmi.ml
-  CompiledObject: best
+  Modules: Gdb
   BuildTools: menhir
-  BuildDepends: extlib, lwt.unix, deriving, lambda-term
+  BuildDepends: extlib, lwt.unix, deriving
+
+Executable pmpi
+  Path: src/
+  MainIs: pmpi.ml
+  CompiledObject: best
+  BuildDepends: gdb, lambda-term
 
 Executable ppx_inject
   Path: ppx/
