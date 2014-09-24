@@ -6,5 +6,5 @@
 <src/*.mly>: explain
 true: use_menhir
 true: debug, annot, warn(+a-4-40)
-<src/gdbmi_proto.ml>: ppx
+<src/gdbmi_proto.ml>: ppx(ppx/ppx_inject.byte)
 #"src/gdbmi_proto.ml": dsource
