@@ -6,7 +6,7 @@ License:     LGPL-2.1 with OCaml linking exception
 Plugins:     DevFiles (0.4)
 BuildTools:  ocamlbuild
 
-Synopsis:    GDB Machine Interface
+Synopsis:    GDB/MI (machine interface) library and stack-sampling interactive rich man's profiler (RMP)
 
 Library gdb
   Path: src/
@@ -14,9 +14,9 @@ Library gdb
   BuildTools: menhir
   BuildDepends: extlib, lwt.unix, deriving
 
-Executable pmpi
+Executable rmp
   Path: src/
-  MainIs: pmpi.ml
+  MainIs: rmp.ml
   CompiledObject: best
   BuildDepends: gdb, lambda-term
 
