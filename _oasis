@@ -8,6 +8,10 @@ BuildTools:  ocamlbuild
 
 Synopsis:    GDB/MI (machine interface) library and stack-sampling interactive rich man's profiler (RMP)
 
+Flag build_rmp
+  Description: Rich man's profiler
+  Default: true
+
 Library gdb
   Path: src/
   Modules: Gdb
@@ -15,6 +19,7 @@ Library gdb
   BuildDepends: extlib, lwt.unix, deriving
 
 Executable rmp
+  Build$: flag(build_rmp)
   Path: src/
   MainIs: rmp.ml
   CompiledObject: best
@@ -26,6 +31,3 @@ Executable ppx_inject
   MainIs: ppx_inject.ml
   CompiledObject: byte
   BuildDepends: ppx_tools
-
-Test unit
-  Command: $gdbmi -test
