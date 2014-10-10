@@ -3,7 +3,7 @@ Name:        gdb
 Version:     1
 Authors:     ygrek
 License:     LGPL-2.1 with OCaml linking exception
-Plugins:     DevFiles (0.4)
+Plugins:     DevFiles (0.4), META (0.4)
 BuildTools:  ocamlbuild
 
 Synopsis:    GDB/MI (machine interface) library and stack-sampling interactive rich man's profiler (RMP)
