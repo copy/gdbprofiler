@@ -28,7 +28,7 @@ let display term h =
 
 let is_exit_key key =
   let open LTerm_key in
-  let module C = CamomileLibraryDefault.Camomile.UChar in
+  let module C = CamomileLibraryDyn.Camomile.UChar in
   match code key with
   | Escape -> true
   | Char ch when C.char_of ch = 'q' -> true

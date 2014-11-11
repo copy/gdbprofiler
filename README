@@ -38,7 +38,7 @@ Instrumenting profiler, requires recompilation, instrumentation influences code 
 
 Poor man's profiler shell script works by calling gdb several times each time attaching to the process,
 collecting trace and detaching. This extremely simple approach works everywhere and yields tons of
-useful information. Unfortunately, it also incurs significant pauses in the profiled pauses and takes
+useful information. Unfortunately, it also incurs significant pauses in the profiled process and takes
 quite a bit of time to collect the traces, also doesn't have interactive mode.
 
 * linux perf
