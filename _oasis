@@ -15,7 +15,7 @@ Flag build_rmp
 Library gdb
   Path: src/
   Modules: Gdb
-  BuildTools: menhir
+  BuildTools: menhir, ppx_inject
   BuildDepends: extlib, lwt.unix, deriving
 
 Executable rmp
@@ -27,7 +27,6 @@ Executable rmp
 
 Executable ppx_inject
   Path: ppx/
-  Build: false
   MainIs: ppx_inject.ml
   CompiledObject: byte
   BuildDepends: ppx_tools
