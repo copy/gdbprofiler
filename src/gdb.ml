@@ -28,19 +28,22 @@ let handle_parser_error line exn =
   | Parser_utils.Error (exn,(_line,_cnum,tok,tail)) ->
    let error = match exn with
    | Failure s -> s
-   | exn -> Printexc.to_string exn 
+   | exn -> Printexc.to_string exn
    in
    eprintfn "==> %s" line;
    eprintfn "  error: %s" error;
    eprintfn "  at: %s%s" tok (String.slice ~last:32 tail);
   | _ -> raise exn
 
-type gdb = { proc : Lwt_process.process; mutable index : int; dump : out_channel Lazy.t; }
+type gdb = {
+  proc : Lwt_process.process;
+  mutable index : int;
+  dump : (string * string * out_channel) option;
+}
 
-let dump_file_final = "pmp.txt"
-let dump_file_temp = "." ^ dump_file_final
-
-let record gdb s = fprintf !!(gdb.dump) "%s\n%!" s
+let record gdb s = match gdb.dump with
+| Some (_,_,ch) -> fprintf ch "%s\n%!" s
+| None -> ()
 
 let send_command gdb s =
   record gdb s;
@@ -61,21 +64,28 @@ let read_input gdb =
 
 let execute gdb s = send_command gdb s >> read_input gdb
 
-let launch () =
+let launch ?dump () =
   let proc = Lwt_process.open_process ("",[|"gdb"; "--interpreter=mi"|]) in
-  let gdb = { proc; index = 0; dump = lazy (open_out dump_file_temp); } in
+  let dump =
+    match dump with
+    | None -> None
+    | Some path ->
+      let (temp,ch) = Filename.(open_temp_file ~temp_dir:(dirname path) (basename path) ".temp") in
+      Some (temp, path, ch)
+  in
+  let gdb = { proc; index = 0; dump; } in
   lwt _greeting = read_input gdb in
 (*   lwt _ = execute gdb "shell date" in (* FIXME shell *) *)
   Lwt.return gdb
 
 let quit gdb = (* FIXME wait -> timeout -> kill *)
   let finish_dump () =
-    if Lazy.is_val gdb.dump then
-    begin
+    match gdb.dump with
+    | Some (temp, final, ch) ->
   (*     U.fsync !!(gdb.dump); *)
-      close_out !!(gdb.dump);
-      Sys.rename dump_file_temp dump_file_final;
-    end
+      close_out ch;
+      Sys.rename temp final
+    | None -> ()
   in
   execute gdb "quit" >> (finish_dump (); Lwt.return gdb.proc#terminate)
 
@@ -187,7 +197,7 @@ let demangle s =
         String.slice s ~last
     | _ -> s
   end
-  else 
+  else
     (* get rid of symbol versioning such as 'pthread_cond_wait@@GLIBC_2.3.2' *)
     truncate_at s "@@"
 

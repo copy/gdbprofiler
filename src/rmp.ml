@@ -19,7 +19,7 @@ let sample gdb =
 let display term h =
   let open LTerm_geom in
   let {rows;cols} = LTerm.size term in
-  let line s = 
+  let line s =
     let s = if String.length s > cols then String.slice ~last:(cols - 2) s ^ " >" else s in
     LTerm.fprintl term s
   in
@@ -41,7 +41,7 @@ let init_term () =
   Lwt.return term
 
 let pmp pid =
-  lwt gdb = Gdb.launch () in
+  lwt gdb = Gdb.launch ~dump:"pmp.txt" () in
   try_lwt
     lwt term = init_term () in
     lwt mode = LTerm.enter_raw_mode term in
