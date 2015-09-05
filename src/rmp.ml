@@ -2,6 +2,7 @@ open Printf
 open ExtLib
 
 let printfn fmt = ksprintf print_endline fmt
+let eprintfn fmt = ksprintf prerr_endline fmt
 
 (** @return most frequent first *)
 let analyze h =
@@ -11,7 +12,7 @@ let analyze h =
   |> List.map (fun (frames,n) -> sprintf "%4d %s" n (String.concat " " @@ List.map Gdb.show_frame_function frames))
 
 let sample gdb =
-  gdb.Gdb.proc#kill Sys.sigint;
+  (Gdb.inferior gdb)#kill Sys.sigint;
   lwt _lines = Gdb.execute gdb "" in (* read notifications TODO check stopped *)
 (*     List.iter (fun r -> print_endline @@ string_of_output_record r) lines; *)
   Gdb.Cmd.stack_list_frames gdb
@@ -41,7 +42,7 @@ let init_term () =
   Lwt.return term
 
 let pmp pid =
-  lwt gdb = Gdb.launch ~dump:"pmp.txt" () in
+  lwt gdb = Gdb.launch () in
   try_lwt
     lwt term = init_term () in
     lwt mode = LTerm.enter_raw_mode term in
@@ -77,12 +78,12 @@ let dump_file file =
       match String.strip s with
       | "" -> ()
       | s ->
-        match Gdb.Parser.parse_io s with
+        match Gdb.parse_io s with
         | Prompt -> printfn "---"
         | Input _ -> printfn "IN: %s" s
         | Output r -> printfn "OUT: %s" @@ Gdbmi_types.string_of_output_record r
     with
-      exn -> Gdb.handle_parser_error s exn
+      exn -> eprintfn "%s" (Printexc.to_string exn)
   in
   Lwt_io.lines_of_file file |> Lwt_stream.iter parse_line
 
@@ -93,7 +94,7 @@ let read_file file =
       match String.strip s with
       | "" -> ()
       | s ->
-        match Gdb.Parser.parse_io s with
+        match Gdb.parse_io s with
         | Output (Result (_, Done [x])) ->
           begin try
             let frames = Gdbmi_proto.stack x in
@@ -101,7 +102,7 @@ let read_file file =
           with _ -> () (* no stack frames here *)
           end
         | _ -> ()
-    with exn -> Gdb.handle_parser_error s exn
+    with exn -> eprintfn "%s" (Printexc.to_string exn)
   in
   lwt term = init_term () in
   lwt () = Lwt_io.lines_of_file file |> Lwt_stream.iter parse_line in

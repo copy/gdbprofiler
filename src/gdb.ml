@@ -3,37 +3,30 @@ open Printf
 open ExtLib
 open Gdbmi_types
 
-external (|>) : 'a -> ('a -> 'b) -> 'b = "%revapply"
-external (@@) : ('a -> 'b) -> 'a -> 'b = "%apply"
-let (!!) = Lazy.force
+exception Parse_error of string * string * string
 
 let eprintfn fmt = ksprintf prerr_endline fmt
-let printfn fmt = ksprintf print_endline fmt
+(* let printfn fmt = ksprintf print_endline fmt *)
 let lwt_fail fmt = ksprintf (fun s -> Lwt.fail (Failure s)) fmt
 
-module Parser = struct
-let make f s = Parser_utils.parse_buf_exn (f Gdbmi_lexer.ruleMain) (Lexing.from_string s)
-let parse_output = make Gdbmi_parser.output
-let parse_io = make Gdbmi_parser.input_output
-end
+let make_parser f s =
+  let lexbuf = Lexing.from_string s in
+  try
+    f Gdbmi_lexer.ruleMain lexbuf
+  with
+  | exn ->
+    let descr = match exn with Failure s -> s | exn -> Printexc.to_string exn in
+    let tok = Lexing.lexeme lexbuf in
+    let tail = Gdbmi_lexer.ruleTail "" lexbuf in
+    raise (Parse_error (s,descr,tok ^ String.slice ~last:32 tail))
 
-let is_alnum = function
-| 'a'..'z' -> true
-| 'A'..'Z' -> true
-| '0'..'9' -> true
-| _ -> false
+let () =
+  Printexc.register_printer @@ function
+  | Parse_error (s,descr,tail) -> Some (sprintf "==> %s\n  error: %s\n  at: %s" s descr tail)
+  | _ -> None
 
-let handle_parser_error line exn =
-  match exn with
-  | Parser_utils.Error (exn,(_line,_cnum,tok,tail)) ->
-   let error = match exn with
-   | Failure s -> s
-   | exn -> Printexc.to_string exn
-   in
-   eprintfn "==> %s" line;
-   eprintfn "  error: %s" error;
-   eprintfn "  at: %s%s" tok (String.slice ~last:32 tail);
-  | _ -> raise exn
+let parse_output = make_parser Gdbmi_parser.output
+let parse_io = make_parser Gdbmi_parser.input_output
 
 type gdb = {
   proc : Lwt_process.process;
@@ -57,11 +50,12 @@ let read_input gdb =
     | "" -> loop acc
     | "(gdb)" -> Lwt.return @@ List.rev acc
     | s ->
-      let r = try Some (Parser.parse_output s) with exn -> handle_parser_error s exn; None in
+      let r = try Some (parse_output s) with exn -> eprintfn "%s" (Printexc.to_string exn); None in
       loop (match r with None -> acc | Some x -> x :: acc)
   in
   loop []
 
+let inferior gdb = gdb.proc
 let execute gdb s = send_command gdb s >> read_input gdb
 
 let launch ?dump () =
