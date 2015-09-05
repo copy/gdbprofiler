@@ -56,7 +56,7 @@ let read_input gdb =
   loop []
 
 let inferior gdb = gdb.proc
-let execute gdb s = send_command gdb s >> read_input gdb
+let execute gdb s = lwt () = send_command gdb s in read_input gdb
 
 let launch ?dump () =
   let proc = Lwt_process.open_process ("",[|"gdb"; "--interpreter=mi"|]) in
@@ -81,7 +81,9 @@ let quit gdb = (* FIXME wait -> timeout -> kill *)
       Sys.rename temp final
     | None -> ()
   in
-  execute gdb "quit" >> (finish_dump (); Lwt.return gdb.proc#terminate)
+  lwt (_:'a list) = execute gdb "quit" in
+  finish_dump ();
+  Lwt.return gdb.proc#terminate
 
 let mi gdb s args =
   gdb.index <- gdb.index + 1;
