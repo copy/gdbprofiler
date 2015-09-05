@@ -5,5 +5,5 @@
 <src/gdb.ml> or <src/rmp.ml>: pkg_lwt.ppx, warn(-42)
 <src/*.mly>: explain
 true: use_menhir
-true: debug, annot, warn(+a-4-40)
+true: debug, annot, warn(+a-4-40-42)
 <src/gdbmi_proto.ml>: ppx(ppx/ppx_inject.byte)

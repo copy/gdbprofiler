@@ -1,6 +1,6 @@
 OASISFormat: 0.4
 Name:        gdb
-Version:     0.1
+Version:     0.2
 Authors:     ygrek
 License:     LGPL-2.1 with OCaml linking exception
 Plugins:     DevFiles (0.4), META (0.4)
@@ -22,7 +22,7 @@ Library gdb
 
 Executable rmp
   Build$: flag(build_rmp)
-  Path: src/
+  Path: cli/
   MainIs: rmp.ml
   CompiledObject: best
   BuildDepends: gdb, lambda-term
