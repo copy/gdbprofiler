@@ -15,7 +15,8 @@ Flag build_rmp
 
 Library gdb
   Path: src/
-  Modules: Gdb
+  Modules: Gdb, Gdbmi_types, Gdbmi_proto
+  InternalModules: Gdbmi_parser, Gdbmi_lexer, Gdbmi_utils
   BuildTools: menhir, ppx_inject
   BuildDepends: extlib, lwt.unix, lwt.ppx, ppx_deriving
 

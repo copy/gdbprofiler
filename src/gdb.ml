@@ -1,7 +1,9 @@
 
 open Printf
 open ExtLib
-open Gdbmi_types
+
+module Types = Gdbmi_types
+module Proto = Gdbmi_proto
 
 exception Parse_error of string * string * string
 
@@ -91,7 +93,7 @@ let mi gdb s args =
   let%lwt () = send_command gdb @@ String.concat " " (sprintf "%s-%s" token s :: args) in
   let rec loop () =
     let%lwt r = read_input gdb in (* skip until token matches *)
-    match List.filter_map (function Result (Some x,r) when x = token -> Some r | _ -> None) r with
+    match List.filter_map (function Types.Result (Some x,r) when x = token -> Some r | _ -> None) r with
     | [] -> loop ()
     | x::_ -> Lwt.return x
   in
@@ -100,7 +102,7 @@ let mi gdb s args =
 let make_command gdb cmd unpack args =
   match%lwt mi gdb cmd args with
   | Done l -> Lwt.wrap1 unpack l
-  | x -> Lwt.fail @@ Failure (sprintf "%s error result: %s" cmd (show_result x))
+  | x -> Lwt.fail @@ Failure (sprintf "%s error result: %s" cmd (Types.show_result x))
 
 module Unparse = struct
 
@@ -133,11 +135,9 @@ module Cmd = struct
 
 open! Unparse
 
-module P = Gdbmi_proto
-
-let stack_list_frames = ret P.stack "stack-list-frames" <= none
+let stack_list_frames = ret Proto.stack "stack-list-frames" <= none
 let break_after = unit "break-after" <= int * int
-let break_list = ret P.breakpoint_table "break-list" <= none
+let break_list = ret Proto.breakpoint_table "break-list" <= none
 let break_disable = unit "break-disable" <= list int
 let break_enable = unit "break-enable" <= list int
 let break_delete = unit "break-delete" <= list int
@@ -147,7 +147,7 @@ end
 
 let run gdb cmd =
   let%lwt r = execute gdb cmd in
-  match List.filter_map (function Result (_,r) -> Some r | _ -> None) r with
+  match List.filter_map (function Types.Result (_,r) -> Some r | _ -> None) r with
   | [] -> lwt_fail "no result from %S" cmd
   | _::_::_ -> lwt_fail "multiple results from %S" cmd
   | [Done _] -> Lwt.return ()
@@ -198,7 +198,7 @@ let demangle s =
     truncate_at s "@@"
 
 let show_frame_function r =
-  let open Gdbmi_proto in
+  let open Proto in
   match (r:frame).func with
   | "??" -> (* use name of library *)
     begin match r.from with

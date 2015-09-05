@@ -79,7 +79,7 @@ let dump_file file =
         match Gdb.parse_io s with
         | Prompt -> printfn "---"
         | Input _ -> printfn "IN: %s" s
-        | Output r -> printfn "OUT: %s" @@ Gdbmi_types.show_output_record r
+        | Output r -> printfn "OUT: %s" @@ Gdb.Types.show_output_record r
     with
       exn -> eprintfn "%s" (Printexc.to_string exn)
   in
@@ -95,7 +95,7 @@ let read_file file =
         match Gdb.parse_io s with
         | Output (Result (_, Done [x])) ->
           begin try
-            let frames = Gdbmi_proto.stack x in
+            let frames = Gdb.Proto.stack x in
             Hashtbl.replace h frames @@ Hashtbl.find_default h frames 0 + 1
           with _ -> () (* no stack frames here *)
           end
