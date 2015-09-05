@@ -1,4 +1,4 @@
-opam-version: "1.1"
+opam-version: "1.2"
 name: "gdb"
 version: "git"
 license: "LGPL-2.1 with OCaml linking exception"
@@ -7,9 +7,19 @@ homepage: "https://github.com/ygrek/ocaml-gdb"
 build: [
   ["ocaml" "setup.ml" "-configure" "--%{lambda-term:enable}%-build-rmp" "--prefix" prefix]
   ["ocaml" "setup.ml" "-build"]
+]
+install: [
   ["ocaml" "setup.ml" "-install"]
 ]
 remove: [["ocamlfind" "remove" "gdb"]]
-depends: ["ocamlfind" "menhir" "extlib" "lwt" "deriving" "ppx_tools" {>= "0.99.1"} "oasis"]
-depopts: ["lambda-term"]
+depends: [
+  "ocamlfind" {build}
+  "menhir"
+  ("extlib"|"extlib-compat")
+  "lwt" {>= "2.4.6"}
+  "ppx_deriving"
+  "ppx_tools" {build & >= "0.99.1"}
+  "oasis" {build & >= "0.4"}
+]
+depopts: ["lambda-term"{build}]
 available: [ocaml-version >= "4.02.0"]

@@ -13,8 +13,8 @@ let analyze h =
 
 let sample gdb =
   (Gdb.inferior gdb)#kill Sys.sigint;
-  lwt _lines = Gdb.execute gdb "" in (* read notifications TODO check stopped *)
-(*     List.iter (fun r -> print_endline @@ string_of_output_record r) lines; *)
+  let%lwt _lines = Gdb.execute gdb "" in (* read notifications TODO check stopped *)
+(*     List.iter (fun r -> print_endline @@ show_output_record r) lines; *)
   Gdb.Cmd.stack_list_frames gdb
 
 let display term h =
@@ -24,7 +24,7 @@ let display term h =
     let s = if String.length s > cols then String.slice ~last:(cols - 2) s ^ " >" else s in
     LTerm.fprintl term s
   in
-  lwt () = LTerm.goto term { row = 0; col = 0; } in
+  let%lwt () = LTerm.goto term { row = 0; col = 0; } in
   Lwt_list.iter_s line @@ List.take (rows - 1) @@ analyze h
 
 let is_exit_key key =
@@ -37,40 +37,38 @@ let is_exit_key key =
   | _ -> false
 
 let init_term () =
-  lwt term = Lazy.force LTerm.stdout in
-  lwt () = LTerm.clear_screen term in
+  let%lwt term = Lazy.force LTerm.stdout in
+  let%lwt () = LTerm.clear_screen term in
   Lwt.return term
 
 let pmp pid =
-  lwt gdb = Gdb.launch () in
-  try_lwt
-    lwt term = init_term () in
-    lwt mode = LTerm.enter_raw_mode term in
-  try_lwt
-    lwt () = Gdb.run gdb "attach %d" pid in
+  let%lwt gdb = Gdb.launch () in
+  begin
+    let%lwt term = init_term () in
+    let%lwt mode = LTerm.enter_raw_mode term in
+  begin
+    let%lwt () = Gdb.run gdb "attach %d" pid in
     let h = Hashtbl.create 10 in
     let should_exit = ref false in
     let rec loop_sampling () =
       match !should_exit with
       | true -> Lwt.return ()
       | false ->
-      lwt () = Gdb.run gdb "continue" in (* TODO check running *)
-      lwt () = Lwt_unix.sleep 0.05 in
-      lwt frames = sample gdb in
+      let%lwt () = Gdb.run gdb "continue" in (* TODO check running *)
+      let%lwt () = Lwt_unix.sleep 0.05 in
+      let%lwt frames = sample gdb in
       Hashtbl.replace h frames @@ Hashtbl.find_default h frames 0 + 1;
-      lwt () = display term h in
+      let%lwt () = display term h in
       loop_sampling ()
     in
     let rec loop_user () =
-      match_lwt LTerm.read_event term with
+      match%lwt LTerm.read_event term with
       | LTerm_event.Key key when is_exit_key key -> should_exit := true; Lwt.return ()
       | _ -> loop_user ()
     in
     Lwt.join [loop_user (); loop_sampling ()]
-  finally
-    LTerm.leave_raw_mode term mode
-  finally
-    Gdb.quit gdb
+  end [%finally LTerm.leave_raw_mode term mode]
+  end [%finally Gdb.quit gdb]
 
 let dump_file file =
   let parse_line s =
@@ -81,7 +79,7 @@ let dump_file file =
         match Gdb.parse_io s with
         | Prompt -> printfn "---"
         | Input _ -> printfn "IN: %s" s
-        | Output r -> printfn "OUT: %s" @@ Gdbmi_types.string_of_output_record r
+        | Output r -> printfn "OUT: %s" @@ Gdbmi_types.show_output_record r
     with
       exn -> eprintfn "%s" (Printexc.to_string exn)
   in
@@ -104,10 +102,10 @@ let read_file file =
         | _ -> ()
     with exn -> eprintfn "%s" (Printexc.to_string exn)
   in
-  lwt term = init_term () in
-  lwt () = Lwt_io.lines_of_file file |> Lwt_stream.iter parse_line in
+  let%lwt term = init_term () in
+  let%lwt () = Lwt_io.lines_of_file file |> Lwt_stream.iter parse_line in
 (*   List.iter print_endline @@ List.rev @@ analyze h; *)
-  lwt () = display term h in
+  let%lwt () = display term h in
   Lwt.return ()
 
 let () =

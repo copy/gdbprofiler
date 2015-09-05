@@ -44,7 +44,7 @@ let send_command gdb s =
 
 let read_input gdb =
   let rec loop acc =
-    lwt s = try_lwt Lwt_io.read_line gdb.proc#stdout with End_of_file -> Lwt.return "(gdb)" in (* timeout? *)
+    let%lwt s = try%lwt Lwt_io.read_line gdb.proc#stdout with End_of_file -> Lwt.return "(gdb)" in (* timeout? *)
     record gdb s;
     match String.strip s with
     | "" -> loop acc
@@ -56,7 +56,7 @@ let read_input gdb =
   loop []
 
 let inferior gdb = gdb.proc
-let execute gdb s = lwt () = send_command gdb s in read_input gdb
+let execute gdb s = let%lwt () = send_command gdb s in read_input gdb
 
 let launch ?dump () =
   let proc = Lwt_process.open_process ("",[|"gdb"; "--interpreter=mi"|]) in
@@ -68,8 +68,8 @@ let launch ?dump () =
       Some (temp, path, ch)
   in
   let gdb = { proc; index = 0; dump; } in
-  lwt _greeting = read_input gdb in
-(*   lwt _ = execute gdb "shell date" in (* FIXME shell *) *)
+  let%lwt _greeting = read_input gdb in
+(*   let%lwt _ = execute gdb "shell date" in (* FIXME shell *) *)
   Lwt.return gdb
 
 let quit gdb = (* FIXME wait -> timeout -> kill *)
@@ -81,16 +81,16 @@ let quit gdb = (* FIXME wait -> timeout -> kill *)
       Sys.rename temp final
     | None -> ()
   in
-  lwt (_:'a list) = execute gdb "quit" in
+  let%lwt (_:'a list) = execute gdb "quit" in
   finish_dump ();
   Lwt.return gdb.proc#terminate
 
 let mi gdb s args =
   gdb.index <- gdb.index + 1;
   let token = sprintf "%d" gdb.index in
-  lwt () = send_command gdb @@ String.concat " " (sprintf "%s-%s" token s :: args) in
+  let%lwt () = send_command gdb @@ String.concat " " (sprintf "%s-%s" token s :: args) in
   let rec loop () =
-    lwt r = read_input gdb in (* skip until token matches *)
+    let%lwt r = read_input gdb in (* skip until token matches *)
     match List.filter_map (function Result (Some x,r) when x = token -> Some r | _ -> None) r with
     | [] -> loop ()
     | x::_ -> Lwt.return x
@@ -98,9 +98,9 @@ let mi gdb s args =
   loop ()
 
 let make_command gdb cmd unpack args =
-  match_lwt mi gdb cmd args with
+  match%lwt mi gdb cmd args with
   | Done l -> Lwt.wrap1 unpack l
-  | x -> Lwt.fail @@ Failure (sprintf "%s error result: %s" cmd (string_of_result x))
+  | x -> Lwt.fail @@ Failure (sprintf "%s error result: %s" cmd (show_result x))
 
 module Unparse = struct
 
@@ -146,7 +146,7 @@ let break_commands = unit "break-commands" <= int * list string
 end
 
 let run gdb cmd =
-  lwt r = execute gdb cmd in
+  let%lwt r = execute gdb cmd in
   match List.filter_map (function Result (_,r) -> Some r | _ -> None) r with
   | [] -> lwt_fail "no result from %S" cmd
   | _::_::_ -> lwt_fail "multiple results from %S" cmd

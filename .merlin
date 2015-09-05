@@ -1,4 +1,3 @@
 B _build
 S src
-PKG extlib lwt
-EXT lwt
+PKG extlib lwt.ppx lwt ppx_deriving.std

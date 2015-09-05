@@ -5,6 +5,7 @@ Authors:     ygrek
 License:     LGPL-2.1 with OCaml linking exception
 Plugins:     DevFiles (0.4), META (0.4)
 BuildTools:  ocamlbuild
+OCamlVersion: >= 4.02
 
 Synopsis:    GDB/MI (machine interface) library and stack-sampling interactive rich man's profiler (RMP)
 
@@ -16,7 +17,7 @@ Library gdb
   Path: src/
   Modules: Gdb
   BuildTools: menhir, ppx_inject
-  BuildDepends: extlib, lwt.unix, deriving
+  BuildDepends: extlib, lwt.unix, lwt.ppx, ppx_deriving
 
 Executable rmp
   Build$: flag(build_rmp)
