@@ -1,13 +1,16 @@
 OASISFormat: 0.4
 Name:        gdb
-Version:     0.2
+Version:     0.3
 Authors:     ygrek
+Homepage:    https://github.com/ygrek/ocaml-gdb
 License:     LGPL-2.1 with OCaml linking exception
 Plugins:     DevFiles (0.4), META (0.4)
 BuildTools:  ocamlbuild
 OCamlVersion: >= 4.02
 
-Synopsis:    GDB/MI (machine interface) library and stack-sampling interactive rich man's profiler (RMP)
+Synopsis:    GDB/MI (machine interface) library
+Description: GDB/MI allows to programmatically control GNU debugger, useful application
+  being a stack-sampling profiler.
 
 Flag build_rmp
   Description: Rich man's profiler
@@ -17,7 +20,7 @@ Library gdb
   Path: src/
   Modules: Gdb, Gdbmi_types, Gdbmi_proto
   InternalModules: Gdbmi_parser, Gdbmi_lexer, Gdbmi_utils
-  BuildTools: menhir, ppx_inject
+  BuildTools: menhir, cppo, ppx_inject
   BuildDepends: extlib, lwt.unix, lwt.ppx, ppx_deriving
 
 Executable rmp
