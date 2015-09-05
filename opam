@@ -3,7 +3,10 @@ name: "gdb"
 version: "git"
 license: "LGPL-2.1 with OCaml linking exception"
 maintainer: "ygrek@autistici.org"
+authors: [ "ygrek" ]
 homepage: "https://github.com/ygrek/ocaml-gdb"
+dev-repo: "git://github.com/ygrek/ocaml-gdb.git"
+bug-reports: "https://github.com/ygrek/ocaml-gdb/issues"
 build: [
   ["ocaml" "setup.ml" "-configure" "--%{lambda-term:enable}%-build-rmp" "--prefix" prefix]
   ["ocaml" "setup.ml" "-build"]
@@ -21,5 +24,5 @@ depends: [
   "ppx_tools" {build & >= "0.99.1"}
   "oasis" {build & >= "0.4"}
 ]
-depopts: ["lambda-term"{build}]
+depopts: ["lambda-term" {build}]
 available: [ocaml-version >= "4.02.0"]
