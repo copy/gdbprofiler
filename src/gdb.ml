@@ -7,6 +7,9 @@ module Proto = Gdbmi_proto
 
 exception Parse_error of string * string * string
 
+exception Not_permitted
+
+
 let eprintfn fmt = ksprintf prerr_endline fmt
 (* let printfn fmt = ksprintf print_endline fmt *)
 let lwt_fail fmt = ksprintf (fun s -> Lwt.fail (Failure s)) fmt
@@ -50,6 +53,8 @@ let read_input gdb =
     record gdb s;
     match String.strip s with
     | "" -> loop acc
+    | {|&"ptrace: Operation not permitted.\n"|} ->
+      raise Not_permitted
     | "(gdb)" -> Lwt.return @@ List.rev acc
     | s ->
       let r = try Some (parse_output s) with exn -> eprintfn "%s" (Printexc.to_string exn); None in
