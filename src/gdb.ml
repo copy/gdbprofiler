@@ -9,9 +9,15 @@ exception Parse_error of string * string * string
 
 exception Not_permitted
 
+let log_verbose = false
+
+let section = Lwt_log.Section.make "gdb"
+let () = if log_verbose then Lwt_log.Section.set_level section Lwt_log.Debug
+let logger = Lwt_main.run @@ Lwt_log.file ~mode:`Append ~file_name:"gdb.log" ()
+let log fmt = Lwt_log.ign_debug_f ~logger ~section (fmt ^^ "\n")
+(* let log fmt = Printf.eprintf (fmt ^^ "\n") *)
 
 let eprintfn fmt = ksprintf prerr_endline fmt
-(* let printfn fmt = ksprintf print_endline fmt *)
 let lwt_fail fmt = ksprintf (fun s -> Lwt.fail (Failure s)) fmt
 
 let make_parser f s =
@@ -45,11 +51,16 @@ let record gdb s = match gdb.dump with
 
 let send_command gdb s =
   record gdb s;
+  log "send: %s" s;
   Lwt_io.write_line gdb.proc#stdin s
 
 let read_input gdb =
   let rec loop acc =
-    let%lwt s = try%lwt Lwt_io.read_line gdb.proc#stdout with End_of_file -> Lwt.return "(gdb)" in (* timeout? *)
+    let%lwt s = try%lwt Lwt_io.read_line gdb.proc#stdout with End_of_file ->
+      log "EOF";
+      Lwt.return "(gdb)"
+    in (* timeout? *)
+    log "receive: %s" s;
     record gdb s;
     match String.strip s with
     | "" -> loop acc
