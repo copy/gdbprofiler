@@ -191,6 +191,36 @@ let replace_all str sub by =
   in
   loop str
 
+let get_hex = function
+  | 'a'..'f' as c -> Some (Char.code c - Char.code 'a' + 10)
+  | '0'..'9' as c -> Some (Char.code c - Char.code '0')
+  | _ -> None
+
+let get_hex2 s =
+  if String.length s >= 2 then
+    match get_hex s.[0], get_hex s.[1] with
+    | Some n1, Some n0 -> Some (Char.chr (n1 * 16 + n0))
+    | _ -> None
+  else
+    None
+
+let unescape s =
+  match String.nsplit s "$" with
+  | [] -> assert false
+  | head :: tail ->
+    let rest = List.map begin fun part ->
+        match get_hex2 part with
+        | Some n ->
+          String.of_char n ^ String.slice ~first:2 part
+        | None ->
+          "$" ^ part
+      end tail
+    in
+    String.concat "" (head :: rest)
+
+let () = assert (unescape "abc" = "abc")
+let () = assert (unescape "abc$20XXX" = "abc XXX")
+
 let is_number s = try ignore (int_of_string s); true with _ -> false
 let truncate_at s sub = try fst @@ String.split s sub with _ -> s
 let drop_prefix s pre = if String.starts_with s pre then String.slice ~first:(String.length pre) s else s
@@ -200,6 +230,7 @@ let demangle s =
   begin
     let s = String.slice ~first:4 s in
     let s = replace_all s "__" "." in
+    let s = unescape s in
     match List.rev @@ String.nsplit s "_" with
     | last'::prev::_ when is_number last' ->
       let last = - (String.length last' + 1) in
