@@ -17,7 +17,7 @@ Installation: `opam pin add gdb https://github.com/copy/rmp`
 
 Usage: `rmp.native top <pid> <out.cpuprofile>`
 
-Example: `./rmp.native top `pidof my_example_program.native` /tmp/example.cpuprofile
+Example: `./rmp.native top ``pidof my_example_program.native`` /tmp/example.cpuprofile`
 
 
 Introduction
