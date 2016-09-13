@@ -1,4 +1,3 @@
-B _build
 B _build/**
 S src/**
 PKG extlib lwt.ppx lwt lambda-term ppx_deriving.std ppx_deriving_yojson containers
