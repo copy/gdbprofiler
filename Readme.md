@@ -1,9 +1,9 @@
 Rich man's profiler
 ===================
 
-This is a fork of https://github.com/ygrek/ocaml-gdb. Support for writing
-cpuprofile files has been added, which can be viewed in Chromium's dev tools
-(press F12).
+This is a fork of https://github.com/ygrek/ocaml-gdb, a gdb-based profiler for
+native OCaml programs. Support for writing cpuprofile files has been added,
+which can be viewed in Chromium's dev tools (press F12).
 
 ![Bottom Up](https://i.imgur.com/smIR1tZ.png)
 
@@ -13,11 +13,14 @@ cpuprofile files has been added, which can be viewed in Chromium's dev tools
 
 RMP doesn't require instrumentation. Compile your code to native binaries.
 
-Installation: `opam pin add gdb https://github.com/copy/rmp`
+Installation: `git clone https://github.com/copy/rmp && opam pin add gdb rmp`
 
 Usage: `rmp.native top <pid> <out.cpuprofile>`
 
-Example: `./rmp.native top ``pidof my_example_program.native`` /tmp/example.cpuprofile`
+Example: `rmp.native top ``pidof my_example_program.native`` example.cpuprofile`
+
+If you're getting a "not permitted" error, run the following:
+`su -c 'sysctlkernel.yama.ptrace_scope=0'`
 
 
 Introduction
