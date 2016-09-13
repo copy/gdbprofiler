@@ -17,7 +17,7 @@ Installation: `git clone https://github.com/copy/rmp && opam pin add gdb rmp`
 
 Usage: `rmp.native top <pid> <out.cpuprofile>`
 
-Example: `rmp.native top \`pidof my_example_program.native\` example.cpuprofile`
+Example:  ```rmp.native top `pidof my_example_program.native` example.cpuprofile```
 
 If you're getting a "not permitted" error, run the following:
 `su -c 'sysctlkernel.yama.ptrace_scope=0'`
