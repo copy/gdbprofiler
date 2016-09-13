@@ -1,6 +1,25 @@
 Rich man's profiler
 ===================
 
+This is a fork of https://github.com/ygrek/ocaml-gdb. Support for writing
+cpuprofile files has been added, which can be viewed in Chromium's dev tools
+(press F12).
+
+![Bottom Up](https://i.imgur.com/smIR1tZ.png)
+
+![Top Down](https://i.imgur.com/6qViAnB.png)
+
+![Chart](https://i.imgur.com/8QEV98Y.png)
+
+RMP doesn't require instrumentation. Compile your code to native binaries.
+
+Installation: `opam pin add gdb https://github.com/copy/rmp`
+
+Usage: `rmp.native top <pid> <out.cpuprofile>`
+
+Example: `./rmp.native top `pidof my_example_program.native` /tmp/example.cpuprofile
+
+
 Introduction
 ------------
 
@@ -46,5 +65,3 @@ quite a bit of time to collect the traces, also doesn't have interactive mode.
 Works only on linux, needs to be compiled with the matching version of kernel headers. Can profile both
 kernel and userland, but only the code that saves frame pointer on the stack. This is true for the majority
 of C code, but doesn't hold for the OCaml native code (in default mode).
-
-----
