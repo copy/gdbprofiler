@@ -22,6 +22,8 @@ Example:  ```rmp.native top `pidof my_example_program.native` example.cpuprofile
 If you're getting a "not permitted" error, run the following:
 `su -c 'sysctlkernel.yama.ptrace_scope=0'`
 
+The output file must have a `.cpuprofile` extension, otherwise Chromium refuses to load it.
+
 
 Introduction
 ------------
