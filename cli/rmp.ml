@@ -214,6 +214,7 @@ let pmp pid cpuprofile_file =
       log "sampling gdb";
       let time = Unix.gettimeofday () in
       let%lwt frames = sample gdb in
+      let frames = Gdb.collapse_recursive_frames frames in
       records := (frames, time) :: !records;
       log "sampled gdb";
       Hashtbl.replace h frames @@ ExtLib.Hashtbl.find_default h frames 0 + 1;

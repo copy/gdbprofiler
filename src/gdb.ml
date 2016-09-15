@@ -161,6 +161,14 @@ let break_commands = unit "break-commands" <= int * list string
 
 end
 
+let rec collapse_recursive_frames : Proto.frame list -> Proto.frame list = function
+  | [] -> []
+  | [x] -> [x]
+  | x :: y :: rest ->
+    if x.Proto.addr = y.addr
+    then collapse_recursive_frames (y :: rest)
+    else x :: y :: collapse_recursive_frames rest
+
 let run gdb cmd =
   let%lwt r = execute gdb cmd in
   match List.filter_map (function Types.Result (_,r) -> Some r | _ -> None) r with

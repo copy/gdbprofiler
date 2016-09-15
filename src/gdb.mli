@@ -17,6 +17,8 @@ val launch : ?dump:string -> unit -> gdb Lwt.t
 (** terminate GDB session and process *)
 val quit : gdb -> unit Lwt.t
 
+val collapse_recursive_frames : Proto.frame list -> Proto.frame list
+
 (** @retrun GDB process *)
 val inferior : gdb -> Lwt_process.process
 
