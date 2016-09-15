@@ -197,9 +197,9 @@ let pmp pid cpuprofile_file =
       match !should_exit with
       | true -> Lwt.return ()
       | false ->
-      log "continuing ...\n";
+      log "continuing ...";
       let%lwt () = Gdb.run gdb "continue" in (* TODO check running *)
-      log "continued\n";
+      log "continued";
       let%lwt () = Lwt_unix.sleep 0.001 in
 (*       let%lwt () = Lwt_unix.yield () in *)
       log "sampling gdb";
