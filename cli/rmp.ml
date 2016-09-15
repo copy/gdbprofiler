@@ -103,8 +103,10 @@ module Cpuprofile = struct
             last_node_id := !last_node_id + 1;
             let func = create_fn func_name ~node_id ~call_id in
             let file =
-              match frame.file, frame.from with
-              | (Some f, _) | (_, Some f) -> f
+              match frame.fullname, frame.file, frame.from with
+              (* fullname is too long and chromium doesn't follow it anyway *)
+(*               | (Some f, _, _) | (_, Some f, _) | (_, _, Some f) -> f *)
+              | (_, Some f, _) | (_, _, Some f) -> f
               | _ -> ""
             in
             let script_id = lookup_id script_table file in
@@ -148,12 +150,19 @@ module Cpuprofile = struct
     }
 end
 
-let sample gdb =
+let rec sample gdb =
   log "Sending sigint";
   (Gdb.inferior gdb)#kill Sys.sigint;
-  let%lwt lines = Gdb.execute gdb "" in (* read notifications TODO check stopped *)
-  List.iter (fun r -> log "%s" @@ Gdb.Types.show_output_record r) lines;
-  Gdb.Cmd.stack_list_frames gdb
+  match%lwt Lwt_unix.with_timeout 0.1 begin fun () ->
+      Gdb.execute gdb "" (* read notifications TODO check stopped *)
+    end with
+  | exception Lwt_unix.Timeout ->
+    log "timeout, retrying";
+    sample gdb
+  | lines ->
+    log "got lines";
+    List.iter (fun r -> log "%s" @@ Gdb.Types.show_output_record r) lines;
+    Gdb.Cmd.stack_list_frames gdb
 
 let display term h =
   let open LTerm_geom in
