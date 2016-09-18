@@ -4,3 +4,4 @@ sh .travis-ocaml.sh
 eval `opam config env`
 
 opam pin add --yes -n $(pwd)
+opam install --yes gdb
