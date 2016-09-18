@@ -11,7 +11,11 @@ which can be viewed in Chromium's dev tools (press F12).
 
 ![Chart](https://i.imgur.com/8QEV98Y.png)
 
-RMP doesn't require instrumentation. Compile your code to native binaries.
+Quick start
+-----------
+
+RMP doesn't require instrumentation. Compile your code to native binaries (add
+`-g` in ocamlc or `-tag debug` in ocamlbuild to see source code locations).
 
 Installation: `git clone https://github.com/copy/rmp && opam pin add gdb rmp`
 
@@ -21,6 +25,8 @@ Example:  ```rmp.native top `pidof my_example_program.native` example.cpuprofile
 
 If you're getting a "not permitted" error, run the following:
 `su -c 'sysctlkernel.yama.ptrace_scope=0'`
+([https://rajeeshknambiar.wordpress.com/2015/07/16/attaching-debugger-and-ptrace_scope/](more
+infos))
 
 The output file must have a `.cpuprofile` extension, otherwise Chromium refuses to load it.
 
