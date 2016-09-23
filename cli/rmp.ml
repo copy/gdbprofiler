@@ -45,6 +45,7 @@ module Cpuprofile = struct
     deoptReason: string;
     id: int;
     positionTicks: int list;
+    selfSize: int; (* only for memory .heapprofile *)
   } [@@deriving yojson]
 
   let create_fn name ~node_id ~call_id =
@@ -60,6 +61,7 @@ module Cpuprofile = struct
       children = [];
       deoptReason = "";
       positionTicks = [];
+      selfSize = 0;
     }
 
   type t = {
@@ -91,9 +93,13 @@ module Cpuprofile = struct
     let script_table = create_id_table () in
     let last_node_id = ref 1 in (* 0 is for root *)
     let root = create_fn "(root)" ~call_id:(lookup_id func_table "(root)") ~node_id:0 in
-    let rec add_to_node node = function
+    let rec add_to_node node allocation frames =
+      match frames with
       | [] ->
-        { node with hitCount = node.hitCount + 1 }, node.id
+        { node with
+          hitCount = node.hitCount + 1;
+          selfSize = node.selfSize + allocation;
+        }, node.id
       | (frame : Gdbmi_proto.frame) :: remaining_frames ->
         let func_name = Gdb.demangle frame.func in
         let rec update = function
@@ -117,11 +123,11 @@ module Cpuprofile = struct
               scriptId = string_of_int script_id;
             }
             in
-            let node, sample_id = add_to_node node remaining_frames in
+            let node, sample_id = add_to_node node allocation remaining_frames in
             [node], sample_id
           | child :: rest ->
             if child.functionName = func_name then
-              let node, sample_id = add_to_node child remaining_frames in
+              let node, sample_id = add_to_node child allocation remaining_frames in
               let sample_id = if remaining_frames = [] then child.id else sample_id in
               node :: rest, sample_id
             else
@@ -131,14 +137,14 @@ module Cpuprofile = struct
         let children, sample_id = update node.children in
         { node with children }, sample_id
     in
-    let root, samples = List.fold_left begin fun (node, samples) (frames, _) ->
+    let root, samples = List.fold_left begin fun (node, samples) (frames, _, allocation) ->
         let frames = List.rev frames in
-        let node, sample_id = add_to_node node frames in
+        let node, sample_id = add_to_node node allocation frames in
         node, sample_id :: samples
       end (root, []) records
     in
-    let _, startTime = List.last records in
-    let _, endTime = List.first records in
+    let _, startTime, _ = List.last records in
+    let _, endTime, _ = List.first records in
     assert (startTime <= endTime);
     let to_microsecond t = Int64.of_float (t *. 1000. *. 1000.) in
     Some {
@@ -146,7 +152,7 @@ module Cpuprofile = struct
       startTime;
       endTime;
       samples;
-      timestamps = List.map (fun (_, t) -> to_microsecond t) records;
+      timestamps = List.map (fun (_, t, _) -> to_microsecond t) records;
     }
 end
 
@@ -188,6 +194,25 @@ let init_term () =
   let%lwt () = LTerm.clear_screen term in
   Lwt.return term
 
+let rec wait_for_user_quit should_exit term =
+  match%lwt LTerm.read_event term with
+  | LTerm_event.Key key when is_exit_key key -> should_exit := true; Lwt.return ()
+  | _ -> wait_for_user_quit should_exit term
+
+let save_profile records filename =
+  let start_create_cpuprofile = Unix.gettimeofday () in
+  let profile = Cpuprofile.of_frames records in
+  let took = Unix.gettimeofday () -. start_create_cpuprofile in
+  log "creating profile took %f" @@ took;
+  Lwt_io.with_file ~mode:Lwt_io.Output filename begin fun channel ->
+      match profile with
+      | Some profile ->
+        Printf.printf "%s written\n" @@ filename;
+        Lwt_io.write channel @@ Yojson.Safe.to_string (Cpuprofile.to_yojson profile)
+      | None ->
+        failwith "Failed to create cpuprofile file"
+    end
+
 let pmp pid cpuprofile_file =
   log "starting";
   let%lwt gdb = Gdb.launch () in
@@ -215,7 +240,7 @@ let pmp pid cpuprofile_file =
       let time = Unix.gettimeofday () in
       let%lwt frames = sample gdb in
       let frames = Gdb.collapse_recursive_frames frames in
-      records := (frames, time) :: !records;
+      records := (frames, time, 0) :: !records;
       log "sampled gdb";
       Hashtbl.replace h frames @@ ExtLib.Hashtbl.find_default h frames 0 + 1;
       log "%d entries" (Hashtbl.length h);
@@ -232,27 +257,8 @@ let pmp pid cpuprofile_file =
       let%lwt () = Lwt_unix.sleep 0.050 in
       loop_draw ()
     in
-    let rec loop_user () =
-      match%lwt LTerm.read_event term with
-      | LTerm_event.Key key when is_exit_key key -> should_exit := true; Lwt.return ()
-      | _ -> loop_user ()
-    in
-    let save () =
-      let start_create_cpuprofile = Unix.gettimeofday () in
-      let profile = Cpuprofile.of_frames !records in
-      let took = Unix.gettimeofday () -. start_create_cpuprofile in
-      log "creating cpu profile took %f" @@ took;
-      Lwt_io.with_file ~mode:Lwt_io.Output cpuprofile_file begin fun channel ->
-          match profile with
-          | Some profile ->
-            Printf.printf "%s written\n" @@ cpuprofile_file;
-            Lwt_io.write channel @@ Yojson.Safe.to_string (Cpuprofile.to_yojson profile)
-          | None ->
-            failwith "Failed to create cpuprofile file"
-        end
-    in
-    let%lwt () = Lwt.join [loop_user (); loop_sampling (); loop_draw ()] in
-    save ()
+    let%lwt () = Lwt.join [wait_for_user_quit should_exit term; loop_sampling (); loop_draw ()] in
+    save_profile !records cpuprofile_file
   end [%finally LTerm.leave_raw_mode term mode]
   end [%finally Gdb.quit gdb]
 
