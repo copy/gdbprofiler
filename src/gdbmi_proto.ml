@@ -49,3 +49,5 @@ type breakpoint_table = {
   hdr : col_desc values;
   body : bkpt list;
 } [@@inject] [@@name "BreakpointTable"]
+
+type value = string [@@inject]

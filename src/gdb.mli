@@ -6,10 +6,8 @@ exception Parse_error of string * string * string
 
 (** type representing GDB/MI session *)
 type gdb
-(*
 val send_command : gdb -> string -> unit Lwt.t
 val read_input : gdb -> Types.output_record list Lwt.t
-*)
 
 (** launch GDB *)
 val launch : ?dump:string -> unit -> gdb Lwt.t
@@ -43,6 +41,8 @@ sig
   val break_enable : gdb -> int list -> unit Lwt.t
   val break_delete : gdb -> int list -> unit Lwt.t
   val break_commands : gdb -> int -> string list -> unit Lwt.t
+  val break_insert : gdb -> string -> unit Lwt.t
+  val data_evaluate_expression : gdb -> string -> string Lwt.t
 end
 
 (** @return demangled human readable function name *)

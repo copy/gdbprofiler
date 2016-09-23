@@ -158,6 +158,8 @@ let break_disable = unit "break-disable" <= list int
 let break_enable = unit "break-enable" <= list int
 let break_delete = unit "break-delete" <= list int
 let break_commands = unit "break-commands" <= int * list string
+let break_insert = ret ignore "break-insert" <= string
+let data_evaluate_expression = ret Proto.value "data-evaluate-expression" <= string
 
 end
 
