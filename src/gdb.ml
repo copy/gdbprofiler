@@ -13,8 +13,8 @@ let log_verbose = false
 
 let section = Lwt_log.Section.make "gdb"
 let () = if log_verbose then Lwt_log.Section.set_level section Lwt_log.Debug
-let logger = Lwt_main.run @@ Lwt_log.file ~mode:`Append ~file_name:"gdb.log" ()
-let log fmt = Lwt_log.ign_debug_f ~logger ~section (fmt ^^ "\n")
+let logger = Lwt_main.run @@ Lwt_log.file ~template:"$(date)+$(milliseconds) | $(name): $(message)" ~mode:`Append ~file_name:"gdb.log" ()
+let log fmt = Lwt_log.ign_debug_f  ~logger ~section (fmt ^^ "\n")
 (* let log fmt = Printf.eprintf (fmt ^^ "\n") *)
 
 let eprintfn fmt = ksprintf prerr_endline fmt
