@@ -3,13 +3,9 @@ Rich man's profiler
 
 This is a fork of https://github.com/ygrek/ocaml-gdb, a gdb-based profiler for
 native OCaml programs. Support for writing cpuprofile files has been added,
-which can be viewed in Chromium's dev tools (press F12).
-
-![Bottom Up](https://i.imgur.com/smIR1tZ.png)
-
-![Top Down](https://i.imgur.com/6qViAnB.png)
-
-![Chart](https://i.imgur.com/8QEV98Y.png)
+which can be viewed in Chromium's dev tools (press F12). It also supports
+writing callgrind files, which can be viewed using
+[https://kcachegrind.github.io/html/Home.html](kachegrind).
 
 Quick start
 -----------
@@ -29,6 +25,25 @@ If you're getting a "not permitted" error, run the following:
 infos))
 
 The output file must have a `.cpuprofile` extension, otherwise Chromium refuses to load it.
+
+<hr>
+
+![Bottom Up](https://i.imgur.com/smIR1tZ.png)
+Bottom up view in Chromium.
+
+![Top Down](https://i.imgur.com/3EA26XM.png)
+Top down view in Chromium.
+
+![Chart](https://i.imgur.com/8QEV98Y.png)
+Chart view in Chromium.
+
+<hr>
+
+![Tree Map](https://i.imgur.com/2d4dvi7.png)
+[Tree Map](https://kcachegrind.github.io/html/TreeMap.html) in kcachegrind.
+
+![Call Graph](https://i.imgur.com/pr7IDdH.png)
+[Call Graph](https://kcachegrind.github.io/html/CallGraph.html) in kcachegrind.
 
 
 Introduction
