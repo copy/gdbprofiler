@@ -1,6 +1,5 @@
 open Printf
 module String = ExtLib.String
-module List = ExtLib.List
 
 let printfn fmt = ksprintf print_endline fmt
 let eprintfn fmt = ksprintf prerr_endline fmt
@@ -17,7 +16,7 @@ let log fmt = Lwt_log.ign_debug_f ~logger ~section (fmt ^^ "\n")
 let analyze h =
   let total = Hashtbl.fold (fun _ count acc -> count + acc) h 0 in
   Hashtbl.fold (fun k v acc -> (k, v) :: acc) h []
-  |> List.sort ~cmp:(fun (_,a) (_,b) -> compare b a)
+  |> List.sort (fun (_,a) (_,b) -> compare b a)
   |> List.map (fun (frames,n) -> sprintf "%5d (%5.1f%%) %s" n (float n /. float total *. 100.) (String.concat " " @@ List.map Gdb.show_frame_function frames))
 
 let print_frames frames =
@@ -54,7 +53,7 @@ let display term h =
     LTerm.fprintl term s
   in
   let%lwt () = LTerm.goto term { row = 0; col = 0; } in
-  Lwt_list.iter_s line @@ List.take (rows - 1) @@ analyze h
+  Lwt_list.iter_s line @@ CCList.take (rows - 1) @@ analyze h
 
 let is_exit_key key =
   let open LTerm_key in
