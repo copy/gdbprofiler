@@ -1,41 +1,85 @@
-type fn = {
-  functionName: string;
-  scriptId: string;
-  url: string;
-  lineNumber: int;
-  columnNumber: int;
-  hitCount: int;
-  callUID: int;
-  children: fn list;
-  deoptReason: string;
-  id: int;
-  positionTicks: int list;
-  selfSize: int; (* only for memory .heapprofile *)
-} [@@deriving yojson]
+type position_tick = {
+  line: int;
+  ticks: int;
+} [@@deriving to_yojson]
 
-let create_fn name ~node_id ~call_id =
+type fn = {
+  function_name: string [@key "functionName"];
+  script_id: string [@key "scriptId"];
+  url: string;
+  line_number: int [@key "lineNumber"];
+  column_number: int [@key "columnNumber"];
+  hit_count: int [@key "hitCount"];
+  call_uid: int [@key "callUID"];
+  deopt_reason: string [@key "deoptReason"];
+  id: int;
+  position_ticks: position_tick list [@key "positionTicks"];
+  children: fn list;
+} [@@deriving to_yojson]
+
+type node = {
+  function_name: string;
+  script_id: string;
+  url: string;
+  line_number: int;
+  column_number: int;
+  hit_count: int;
+  total_hit_count: int;
+  call_uid: int;
+  id: int;
+  position_ticks: position_tick list;
+  time: float;
+  total_time: float;
+  self_size: int; (* only for memory .heapprofile *)
+  address: int;
+  full_name: string;
+  children: node list;
+}
+
+let rec node_to_fn node =
+  let { function_name; script_id; url; line_number; column_number;
+        hit_count; call_uid; id; position_ticks; children; _ } : node = node in
+  ({
+    function_name;
+    script_id;
+    url;
+    line_number;
+    column_number;
+    hit_count;
+    call_uid;
+    deopt_reason = "";
+    id;
+    position_ticks;
+    children = List.map node_to_fn children;
+  } : fn)
+
+let create_node name ~node_id ~call_id =
   {
-    functionName = name;
+    function_name = name;
     id = node_id;
-    scriptId = "0";
+    script_id = "0";
     url = "";
-    lineNumber = 0;
-    columnNumber = 0;
-    hitCount = 0;
-    callUID = call_id;
+    line_number = 0;
+    column_number = 0;
+    hit_count = 0;
+    total_hit_count = 0;
+    call_uid = call_id;
+    position_ticks = [];
+    time = 0.0;
+    total_time = 0.0;
+    self_size = 0;
+    address = 0;
+    full_name = "";
     children = [];
-    deoptReason = "";
-    positionTicks = [];
-    selfSize = 0;
   }
 
 type t = {
   head: fn;
-  startTime: float;
-  endTime: float;
+  start_time: float [@key "startTime"];
+  end_time: float [@key "endTime"];
   samples: int list;
   timestamps: Int64.t list;
-} [@@deriving yojson]
+} [@@deriving to_yojson]
 
 let lookup_id (table, last_id) name =
   match CCHashtbl.get table name with
@@ -58,29 +102,38 @@ let rec update_element_or_add pred f xs =
     if pred x then f (Some x) :: xs
     else x :: update_element_or_add pred f xs'
 
-let of_frames records =
-  if records = [] then
-    None
-  else
+let of_frames records end_time =
+  if records = [] then failwith "Empty records";
   let func_table = create_id_table () in
   let script_table = create_id_table () in
   let last_node_id = ref 1 in (* 0 is for root *)
-  let root = create_fn "(root)" ~call_id:(lookup_id func_table "(root)") ~node_id:0 in
-  let rec add_to_node node allocation frames =
+  let root = create_node "(root)" ~call_id:(lookup_id func_table "(root)") ~node_id:0 in
+  let rec bump_position_ticks ticks line =
+    match ticks with
+    | [] -> [{ line; ticks = 1 }]
+    | tick :: rest ->
+      if tick.line = line then
+        { tick with ticks = tick.ticks + 1 } :: rest
+      else
+        tick :: bump_position_ticks rest line
+  in
+  let rec add_frames_to_node node time allocation frames =
     match frames with
     | [] ->
       { node with
-        hitCount = node.hitCount + 1;
-        selfSize = node.selfSize + allocation;
+        hit_count = node.hit_count + 1;
+        total_hit_count = node.total_hit_count + 1;
+        self_size = node.self_size + allocation;
+        time;
       }, node.id
     | (frame : Gdbmi_proto.frame) :: remaining_frames ->
-      let func_name = Gdb.demangle frame.func in
+      let call_id = lookup_id func_table frame.func in
       let rec update = function
         | [] ->
-          let call_id = lookup_id func_table func_name in
           let node_id = !last_node_id in
           last_node_id := !last_node_id + 1;
-          let func = create_fn func_name ~node_id ~call_id in
+          let demangled_name = Gdb.demangle frame.func in
+          let func = create_node demangled_name ~node_id ~call_id in
           let file =
             match frame.fullname, frame.file, frame.from with
             (* fullname is too long and chromium doesn't follow it anyway *)
@@ -88,42 +141,70 @@ let of_frames records =
             | (_, Some f, _) | (_, _, Some f) -> f
             | _ -> ""
           in
+          let file = "http://localhost/ocaml/" ^ file in
           let script_id = lookup_id script_table file in
+          let line = CCOpt.get_or ~default:1 frame.line in
+          let address = int_of_string frame.addr in
+          let position_ticks =
+            if remaining_frames = []
+            then bump_position_ticks func.position_ticks line
+            else func.position_ticks
+          in
           let node = {
             func with
-            lineNumber = CCOpt.get_or ~default:0 frame.line;
+            line_number = line;
             url = file;
-            scriptId = string_of_int script_id;
+            script_id = string_of_int script_id;
+            address;
+            full_name = CCOpt.get_or ~default:file frame.fullname;
+            position_ticks;
           }
           in
-          let node, sample_id = add_to_node node allocation remaining_frames in
+          let node, sample_id = add_frames_to_node node time allocation remaining_frames in
           [node], sample_id
         | child :: rest ->
-          if child.functionName = func_name then
-            let node, sample_id = add_to_node child allocation remaining_frames in
+          if child.call_uid = call_id then
+            let node, sample_id = add_frames_to_node child time allocation remaining_frames in
             let sample_id = if remaining_frames = [] then child.id else sample_id in
+            let line = CCOpt.get_or ~default:1 frame.line in
+            let node =
+              if remaining_frames = []
+              then { node with position_ticks = bump_position_ticks node.position_ticks line }
+              else node
+            in
             node :: rest, sample_id
           else
             let rest, sample_id = update rest in
             child :: rest, sample_id
       in
       let children, sample_id = update node.children in
-      { node with children }, sample_id
+      { node with
+        children;
+        total_hit_count = node.total_hit_count + 1;
+        total_time = node.total_time +. time
+      }, sample_id
   in
-  let root, samples = List.fold_left begin fun (node, samples) (frames, _, allocation) ->
+  let rec calculate_time_deltas = function
+    | [] -> []
+    | (frames, time, allocation) :: [] ->
+      [(frames, end_time -. time, allocation)]
+    | (frames, time, allocation) :: ((_, next_time, _) as next) :: rest ->
+      (frames, next_time -. time, allocation) :: calculate_time_deltas (next :: rest)
+  in
+  let root, samples = List.fold_left begin fun (node, samples) (frames, time, allocation) ->
+      assert (time >= 0.);
       let frames = List.rev frames in
-      let node, sample_id = add_to_node node allocation frames in
+      let node, sample_id = add_frames_to_node node time allocation frames in
       node, sample_id :: samples
-    end (root, []) records
+    end (root, []) (calculate_time_deltas records)
   in
-  let _, startTime, _ = match List.rev records with r::_ -> r | _ -> assert false in
-  let _, endTime, _ = match records with r::_ -> r | _ -> assert false in
-  assert (startTime <= endTime);
+  let _, start_time, _ = match CCList.head_opt records with Some r -> r | None -> assert false in
+  assert (start_time <= end_time);
   let to_microsecond t = Int64.of_float (t *. 1000. *. 1000.) in
-  Some {
-    head = root;
-    startTime;
-    endTime;
+  ({
+    head = node_to_fn root;
+    start_time;
+    end_time;
     samples;
     timestamps = List.map (fun (_, t, _) -> to_microsecond t) records;
-  }
+  }, root)

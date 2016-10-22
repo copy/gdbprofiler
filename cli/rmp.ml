@@ -74,19 +74,30 @@ let rec wait_for_user_quit should_exit term =
   | LTerm_event.Key key when is_exit_key key -> should_exit := true; Lwt.return ()
   | _ -> wait_for_user_quit should_exit term
 
-let save_profile records filename =
+let save_profile records end_time filename =
   let start_create_cpuprofile = Unix.gettimeofday () in
-  let profile = Cpuprofile.of_frames records in
+  let profile, node = Cpuprofile.of_frames records end_time in
   let took = Unix.gettimeofday () -. start_create_cpuprofile in
   log "creating profile took %f" @@ took;
-  Lwt_io.with_file ~mode:Lwt_io.Output filename begin fun channel ->
+  let%lwt () = Lwt_io.with_file ~mode:Lwt_io.Output filename begin fun channel ->
+(*
       match profile with
       | Some profile ->
+*)
         Printf.printf "%s written\n" @@ filename;
         Lwt_io.write channel @@ Yojson.Safe.to_string (Cpuprofile.to_yojson profile)
+(*
       | None ->
         failwith "Failed to create cpuprofile file"
+*)
     end
+  in
+  let filename' = "/tmp/callgrind.out" in
+  let%lwt () = Lwt_io.with_file ~mode:Lwt_io.Output filename' begin fun channel ->
+      Lwt_io.write channel @@ Callgrind.of_node node
+    end
+  in
+  Lwt.return_unit
 
 let pmp pid cpuprofile_file =
   log "starting";
@@ -102,13 +113,14 @@ let pmp pid cpuprofile_file =
     let h = Hashtbl.create 10 in
     let records = ref [] in
     let should_exit = ref false in
-    let rec loop_sampling () =
+    let rec loop_sampling next_tick =
       match !should_exit with
       | true -> Lwt.return ()
       | false ->
       log "continuing ...";
       let%lwt () = Gdb.run gdb "continue" in (* TODO check running *)
       log "continued";
+(*       let%lwt () = Lwt_unix.sleep (CCFloat.max 0.001 (next_tick -. Unix.gettimeofday ())) in *)
       let%lwt () = Lwt_unix.sleep 0.001 in
 (*       let%lwt () = Lwt_unix.yield () in *)
       log "sampling gdb";
@@ -122,7 +134,7 @@ let pmp pid cpuprofile_file =
       log "frames: %s" @@ print_frames frames;
       List.iter (fun frame -> log "frame: %s" @@ print_frame frame) frames;
       log "next iteration";
-      loop_sampling ()
+      loop_sampling (next_tick +. 0.010)
     in
     let rec loop_draw () =
       match !should_exit with
@@ -132,8 +144,9 @@ let pmp pid cpuprofile_file =
       let%lwt () = Lwt_unix.sleep 0.050 in
       loop_draw ()
     in
-    let%lwt () = Lwt.join [wait_for_user_quit should_exit term; loop_sampling (); loop_draw ()] in
-    save_profile !records cpuprofile_file
+    let%lwt () = Lwt.join [wait_for_user_quit should_exit term; loop_sampling (Unix.gettimeofday () +. 0.010); loop_draw ()] in
+    let end_time = Unix.gettimeofday () in
+    save_profile (List.rev !records) end_time cpuprofile_file
   end [%finally LTerm.leave_raw_mode term mode]
   end [%finally Gdb.quit gdb]
 
