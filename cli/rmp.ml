@@ -74,32 +74,24 @@ let rec wait_for_user_quit should_exit term =
   | LTerm_event.Key key when is_exit_key key -> should_exit := true; Lwt.return ()
   | _ -> wait_for_user_quit should_exit term
 
-let save_profile records end_time filename =
+let save_profile records end_time cpuprofile_file callgrind_file =
   let start_create_cpuprofile = Unix.gettimeofday () in
   let profile, node = Cpuprofile.of_frames records end_time in
   let took = Unix.gettimeofday () -. start_create_cpuprofile in
   log "creating profile took %f" @@ took;
-  let%lwt () = Lwt_io.with_file ~mode:Lwt_io.Output filename begin fun channel ->
-(*
-      match profile with
-      | Some profile ->
-*)
-        Printf.printf "%s written\n" @@ filename;
-        Lwt_io.write channel @@ Yojson.Safe.to_string (Cpuprofile.to_yojson profile)
-(*
-      | None ->
-        failwith "Failed to create cpuprofile file"
-*)
+  let%lwt () = Lwt_io.with_file ~mode:Lwt_io.Output cpuprofile_file begin fun channel ->
+      Printf.printf "%s written\n" @@ cpuprofile_file;
+      Lwt_io.write channel @@ Yojson.Safe.to_string (Cpuprofile.to_yojson profile)
     end
   in
-  let filename' = "/tmp/callgrind.out" in
-  let%lwt () = Lwt_io.with_file ~mode:Lwt_io.Output filename' begin fun channel ->
+  let%lwt () = Lwt_io.with_file ~mode:Lwt_io.Output callgrind_file begin fun channel ->
+      Printf.printf "%s written\n" @@ callgrind_file;
       Lwt_io.write channel @@ Callgrind.of_node node
     end
   in
   Lwt.return_unit
 
-let pmp pid cpuprofile_file =
+let pmp pid cpuprofile_file callgrind_file =
   log "starting";
   let%lwt gdb = Gdb.launch () in
   log "launched";
@@ -190,8 +182,22 @@ let read_file file =
 
 let () =
   let () = Printexc.record_backtrace true in
-  match List.tl @@ Array.to_list Sys.argv with
-  | ["top"; pid; file] -> Lwt_main.run @@ pmp (int_of_string pid) file
-(*   | ["dump";file] -> Lwt_main.run @@ dump_file file *)
-(*   | ["read";file] -> Lwt_main.run @@ read_file file *)
-  | _ -> Printf.eprintf  "Usage: rmp.native top <pid> <out.cpuprofile>\n"
+  let pid = ref (-1) in
+  let callgrind_file = ref "" in
+  let cpuprofile_file = ref "" in
+  let spec = [
+    "-p", Arg.Set_int pid,
+      ": process id (pid)";
+    "--cpuprofile", Arg.Set_string cpuprofile_file,
+      ": Write out cpuprofile file to the given path (can be opened with Chromium)";
+    "--callgrind", Arg.Set_string callgrind_file,
+      ": Write out callgrind file to the given path (can be opened with kcachegrind)";
+  ]
+  in
+  let usage = "Usage: rmp -p <pid> [--cpuprofile path] [--callgrind path]" in
+  Arg.parse spec (fun _ -> ()) usage;
+  if !pid = -1 then begin
+    Arg.usage spec usage
+  end
+  else
+    Lwt_main.run @@ pmp !pid !cpuprofile_file !callgrind_file

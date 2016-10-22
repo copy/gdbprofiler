@@ -19,9 +19,9 @@ RMP doesn't require instrumentation. Compile your code to native binaries (add
 
 Installation: `git clone https://github.com/copy/rmp && opam pin add gdb rmp`
 
-Usage: `rmp.native top <pid> <out.cpuprofile>`
+Usage: `rmp.native -p <pid> --cpuprofile <path> --callgrind <path>`
 
-Example:  ```rmp.native top `pidof my_example_program.native` example.cpuprofile```
+Example:  ```rmp.native -p `pidof my_example_program.native` --cpuprofile example.cpuprofile --callgrind callgrind.out```
 
 If you're getting a "not permitted" error, run the following:
 `su -c 'sysctlkernel.yama.ptrace_scope=0'`
