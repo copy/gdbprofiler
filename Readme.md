@@ -29,20 +29,31 @@ The output file must have a `.cpuprofile` extension, otherwise Chromium refuses 
 <hr>
 
 ![Bottom Up](https://i.imgur.com/smIR1tZ.png)
+
 Bottom up view in Chromium.
 
+<hr>
+
 ![Top Down](https://i.imgur.com/3EA26XM.png)
+
 Top down view in Chromium.
 
+<hr>
+
 ![Chart](https://i.imgur.com/8QEV98Y.png)
+
 Chart view in Chromium.
 
 <hr>
 
 ![Tree Map](https://i.imgur.com/2d4dvi7.png)
+
 [Tree Map](https://kcachegrind.github.io/html/TreeMap.html) in kcachegrind.
 
+<hr>
+
 ![Call Graph](https://i.imgur.com/pr7IDdH.png)
+
 [Call Graph](https://kcachegrind.github.io/html/CallGraph.html) in kcachegrind.
 
 
