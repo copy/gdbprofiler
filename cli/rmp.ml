@@ -79,12 +79,14 @@ let save_profile records end_time cpuprofile_file callgrind_file =
   let profile, node = Cpuprofile.of_frames records end_time in
   let took = Unix.gettimeofday () -. start_create_cpuprofile in
   log "creating profile took %f" @@ took;
-  let%lwt () = Lwt_io.with_file ~mode:Lwt_io.Output cpuprofile_file begin fun channel ->
+  let%lwt () = if cpuprofile_file = "" then Lwt.return_unit else
+      Lwt_io.with_file ~mode:Lwt_io.Output cpuprofile_file begin fun channel ->
       Printf.printf "%s written\n" @@ cpuprofile_file;
       Lwt_io.write channel @@ Yojson.Safe.to_string (Cpuprofile.to_yojson profile)
     end
   in
-  let%lwt () = Lwt_io.with_file ~mode:Lwt_io.Output callgrind_file begin fun channel ->
+  let%lwt () = if callgrind_file = "" then Lwt.return_unit else
+    Lwt_io.with_file ~mode:Lwt_io.Output callgrind_file begin fun channel ->
       Printf.printf "%s written\n" @@ callgrind_file;
       Lwt_io.write channel @@ Callgrind.of_node node
     end
