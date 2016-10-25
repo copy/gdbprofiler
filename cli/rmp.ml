@@ -146,9 +146,10 @@ let pmp pid cpuprofile_file callgrind_file =
     in
     let%lwt () = Lwt.join [wait_for_user_quit should_exit term; loop_sampling (Unix.gettimeofday () +. 0.010); loop_draw ()] in
     let end_time = Unix.gettimeofday () in
-    save_profile (List.rev !records) end_time cpuprofile_file
+    save_profile (List.rev !records) end_time cpuprofile_file callgrind_file
   end [%finally LTerm.leave_raw_mode term mode]
   end [%finally Gdb.quit gdb]
+
 
 let dump_file file =
   let parse_line s =
