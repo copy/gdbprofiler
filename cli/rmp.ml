@@ -12,12 +12,18 @@ let logger = Lwt_main.run @@ Lwt_log.file ~mode:`Append ~file_name:"rmp.log" ()
 let log fmt = Lwt_log.ign_debug_f ~logger ~section (fmt ^^ "\n")
 (* let log fmt = Printf.eprintf (fmt ^^ "\n") *)
 
+let show_frame_cached =
+  let eq (f1 : Gdb.Proto.frame) (f2 : Gdb.Proto.frame) = f1.func = f2.func && f1.from = f2.from in
+  let hash (f : Gdb.Proto.frame) = Hashtbl.hash (f.func, f.from) in
+  let cache = CCCache.unbounded ~eq ~hash 1024 in
+  CCCache.with_cache cache Gdb.show_frame_function
+
 (** @return most frequent first *)
 let analyze h =
   let total = Hashtbl.fold (fun _ count acc -> count + acc) h 0 in
   Hashtbl.fold (fun k v acc -> (k, v) :: acc) h []
   |> List.sort (fun (_,a) (_,b) -> compare b a)
-  |> List.map (fun (frames,n) -> sprintf "%5d (%5.1f%%) %s" n (float n /. float total *. 100.) (String.concat " " @@ List.map Gdb.show_frame_function frames))
+  |> List.map (fun (frames,n) -> sprintf "%5d (%5.1f%%) %s" n (float n /. float total *. 100.) (String.concat " " @@ List.map show_frame_cached frames))
 
 let print_frames frames =
   (String.concat " " @@ List.map Gdb.show_frame_function frames)
@@ -125,8 +131,8 @@ let pmp pid cpuprofile_file callgrind_file =
       log "sampled gdb";
       Hashtbl.replace h frames @@ ExtLib.Hashtbl.find_default h frames 0 + 1;
       log "%d entries" (Hashtbl.length h);
-      log "frames: %s" @@ print_frames frames;
-      List.iter (fun frame -> log "frame: %s" @@ print_frame frame) frames;
+      if log_verbose then log "frames: %s" @@ print_frames frames;
+      if log_verbose then List.iter (fun frame -> log "frame: %s" @@ print_frame frame) frames;
       log "next iteration";
       loop_sampling (next_tick +. 0.010)
     in
@@ -135,7 +141,7 @@ let pmp pid cpuprofile_file callgrind_file =
       | true -> Lwt.return ()
       | false ->
       let%lwt () = display term h in
-      let%lwt () = Lwt_unix.sleep 0.050 in
+      let%lwt () = Lwt_unix.sleep 0.250 in
       loop_draw ()
     in
     let%lwt () = Lwt.join [wait_for_user_quit should_exit term; loop_sampling (Unix.gettimeofday () +. 0.010); loop_draw ()] in
