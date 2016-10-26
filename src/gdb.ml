@@ -166,10 +166,10 @@ end
 let rec collapse_recursive_frames : Proto.frame list -> Proto.frame list = function
   | [] -> []
   | [x] -> [x]
-  | x :: y :: rest ->
-    if x.Proto.addr = y.addr
-    then collapse_recursive_frames (y :: rest)
-    else x :: y :: collapse_recursive_frames rest
+  | x :: (y :: _ as rest) ->
+    if x.func = y.func
+    then collapse_recursive_frames rest
+    else x :: collapse_recursive_frames rest
 
 let run gdb cmd =
   let%lwt r = execute gdb cmd in
