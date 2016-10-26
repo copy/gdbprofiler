@@ -72,7 +72,6 @@ let is_exit_key key =
 
 let init_term () =
   let%lwt term = Lazy.force LTerm.stdout in
-  let%lwt () = LTerm.clear_screen term in
   Lwt.return term
 
 let rec wait_for_user_quit should_exit term =
@@ -109,6 +108,7 @@ let pmp pid cpuprofile_file callgrind_file =
     log "term raw mode";
   begin
     let%lwt () = Gdb.run gdb "attach %d" pid in
+    let%lwt () = LTerm.clear_screen term in
     log "attached";
     let h = Hashtbl.create 10 in
     let records = ref [] in
