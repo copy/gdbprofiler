@@ -72,6 +72,7 @@ let save_profile records end_time cpuprofile_file callgrind_file =
   Lwt.return_unit
 
 let pmp pid cpuprofile_file callgrind_file =
+  let%lwt () = Lwt_io.print "Press enter to stop\n" in
   log "starting";
   let%lwt gdb = Gdb.launch () in
   log "launched";
@@ -105,7 +106,11 @@ let pmp pid cpuprofile_file callgrind_file =
       log "next iteration";
       loop_sampling (next_tick +. 0.010)
     in
-    let%lwt () = Lwt.join [loop_sampling (Unix.gettimeofday () +. 0.010);] in
+    let wait_for_stop () =
+      let%lwt _ = Lwt_io.read_char Lwt_io.stdin in
+      Lwt.return_unit
+    in
+    let%lwt () = Lwt.pick [loop_sampling (Unix.gettimeofday () +. 0.010); wait_for_stop ()] in
     let end_time = Unix.gettimeofday () in
     save_profile (List.rev !records) end_time cpuprofile_file callgrind_file
   end [%finally Gdb.quit gdb]
