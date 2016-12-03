@@ -37,6 +37,7 @@ let print_frame frame =
     frame.Gdbmi_proto.level frame.addr frame.func (print_opt frame.from) (print_opt frame.file) (print_opt frame.fullname)
     (match frame.line with None -> 0 | Some l -> l)
 
+
 let rec sample gdb =
   log "Sending sigint";
   (Gdb.inferior gdb)#kill Sys.sigint;
@@ -50,34 +51,6 @@ let rec sample gdb =
     log "got lines";
     List.iter (fun r -> log "%s" @@ Gdb.Types.show_output_record r) lines;
     Gdb.Cmd.stack_list_frames gdb
-
-let display term h =
-  let open LTerm_geom in
-  let {rows;cols} = LTerm.size term in
-  let line s =
-    let s = if String.length s > cols then String.slice ~last:(cols - 2) s ^ " >" else s in
-    LTerm.fprintl term s
-  in
-  let%lwt () = LTerm.goto term { row = 0; col = 0; } in
-  Lwt_list.iter_s line @@ CCList.take (rows - 1) @@ analyze h
-
-let is_exit_key key =
-  let open LTerm_key in
-  let module C = CamomileLibraryDyn.Camomile.UChar in
-  match code key with
-  | Escape -> true
-  | Char ch when C.char_of ch = 'q' -> true
-  | Char ch when control key && C.char_of ch = 'c' -> true
-  | _ -> false
-
-let init_term () =
-  let%lwt term = Lazy.force LTerm.stdout in
-  Lwt.return term
-
-let rec wait_for_user_quit should_exit term =
-  match%lwt LTerm.read_event term with
-  | LTerm_event.Key key when is_exit_key key -> should_exit := true; Lwt.return ()
-  | _ -> wait_for_user_quit should_exit term
 
 let save_profile records end_time cpuprofile_file callgrind_file =
   let start_create_cpuprofile = Unix.gettimeofday () in
@@ -103,12 +76,8 @@ let pmp pid cpuprofile_file callgrind_file =
   let%lwt gdb = Gdb.launch () in
   log "launched";
   begin
-    let%lwt term = init_term () in
-    let%lwt mode = LTerm.enter_raw_mode term in
-    log "term raw mode";
-  begin
+(*     let%lwt _ = Gdb.mi gdb "gdb-set" ["mi-async"; "on"] in *)
     let%lwt () = Gdb.run gdb "attach %d" pid in
-    let%lwt () = LTerm.clear_screen term in
     log "attached";
     let h = Hashtbl.create 10 in
     let records = ref [] in
@@ -118,7 +87,7 @@ let pmp pid cpuprofile_file callgrind_file =
       | true -> Lwt.return ()
       | false ->
       log "continuing ...";
-      let%lwt () = Gdb.run gdb "continue" in (* TODO check running *)
+      let%lwt () = try%lwt Gdb.run gdb "continue" with e -> log "Exception while running continue: %s" @@ Printexc.to_string e; Lwt.return_unit in (* TODO check running *)
       log "continued";
 (*       let%lwt () = Lwt_unix.sleep (CCFloat.max 0.001 (next_tick -. Unix.gettimeofday ())) in *)
       let%lwt () = Lwt_unix.sleep 0.001 in
@@ -136,18 +105,9 @@ let pmp pid cpuprofile_file callgrind_file =
       log "next iteration";
       loop_sampling (next_tick +. 0.010)
     in
-    let rec loop_draw () =
-      match !should_exit with
-      | true -> Lwt.return ()
-      | false ->
-      let%lwt () = display term h in
-      let%lwt () = Lwt_unix.sleep 0.250 in
-      loop_draw ()
-    in
-    let%lwt () = Lwt.join [wait_for_user_quit should_exit term; loop_sampling (Unix.gettimeofday () +. 0.010); loop_draw ()] in
+    let%lwt () = Lwt.join [loop_sampling (Unix.gettimeofday () +. 0.010);] in
     let end_time = Unix.gettimeofday () in
     save_profile (List.rev !records) end_time cpuprofile_file callgrind_file
-  end [%finally LTerm.leave_raw_mode term mode]
   end [%finally Gdb.quit gdb]
 
 
@@ -166,28 +126,6 @@ let dump_file file =
   in
   Lwt_io.lines_of_file file |> Lwt_stream.iter parse_line
 
-let read_file file =
-  let h = Hashtbl.create 10 in
-  let parse_line s =
-    try
-      match String.strip s with
-      | "" -> ()
-      | s ->
-        match Gdb.parse_io s with
-        | Output (Result (_, Done [x])) ->
-          begin try
-            let frames = Gdb.Proto.stack x in
-            Hashtbl.replace h frames @@ ExtLib.Hashtbl.find_default h frames 0 + 1
-          with _ -> () (* no stack frames here *)
-          end
-        | _ -> ()
-    with exn -> eprintfn "%s" (Printexc.to_string exn)
-  in
-  let%lwt term = init_term () in
-  let%lwt () = Lwt_io.lines_of_file file |> Lwt_stream.iter parse_line in
-(*   List.iter print_endline @@ List.rev @@ analyze h; *)
-  let%lwt () = display term h in
-  Lwt.return ()
 
 let () =
   let () = Printexc.record_backtrace true in
@@ -205,6 +143,9 @@ let () =
   in
   let usage = "Usage: rmp -p <pid> [--cpuprofile path] [--callgrind path]" in
   Arg.parse spec (fun _ -> ()) usage;
+  if !callgrind_file = "" && !cpuprofile_file = "" then begin
+    prerr_endline "Warning: No output file specified"
+  end;
   if !pid = -1 then begin
     Arg.usage spec usage
   end

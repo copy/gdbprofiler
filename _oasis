@@ -28,7 +28,7 @@ Executable rmp
   Path: cli/
   MainIs: rmp.ml
   CompiledObject: best
-  BuildDepends: gdb, lambda-term, ppx_deriving_yojson, containers, containers.data
+  BuildDepends: gdb, ppx_deriving_yojson, containers, containers.data
 
 Executable ppx_inject
   Path: ppx/
