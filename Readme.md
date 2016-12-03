@@ -10,10 +10,12 @@ writing callgrind files, which can be viewed using
 Quick start
 -----------
 
-RMP doesn't require instrumentation. Compile your code to native binaries (add
-`-g` in ocamlc or `-tag debug` in ocamlbuild to see source code locations).
+RMP doesn't require instrumentation. Compile your code to native binaries. Optionally, add
+`-g` in ocamlc or `-tag debug` in ocamlbuild to see source code locations.
 
-Installation: `git clone https://github.com/copy/rmp && opam pin add gdb rmp`
+Install dependencies: `opam install menhir extlib lwt ppx_deriving ppx_deriving_yojson ppx_tools oasis cppo containers`
+
+Installation: `git clone https://github.com/copy/rmp && cd rmp && make`
 
 Usage: `rmp.native -p <pid> --cpuprofile <path> --callgrind <path>`
 
