@@ -17,9 +17,9 @@ Install dependencies: `opam install menhir extlib lwt ppx_deriving ppx_deriving_
 
 Installation: `git clone https://github.com/copy/rmp && cd rmp && make`
 
-Usage: `rmp.native -p <pid> --cpuprofile <path> --callgrind <path>`
+Usage: `rmp -p <pid> --cpuprofile <path> --callgrind <path>`
 
-Example:  ```rmp.native -p `pidof my_example_program.native` --cpuprofile example.cpuprofile --callgrind callgrind.out```
+Example:  ```rmp -p `pidof my_example_program.native` --cpuprofile example.cpuprofile --callgrind callgrind.out```
 
 If you're getting a "not permitted" error, run the following:
 `su -c 'sysctlkernel.yama.ptrace_scope=0'`
