@@ -8,8 +8,8 @@ homepage: "https://github.com/ygrek/ocaml-gdb"
 dev-repo: "git://github.com/ygrek/ocaml-gdb.git"
 bug-reports: "https://github.com/ygrek/ocaml-gdb/issues"
 build: [
-  ["ocaml" "setup.ml" "-configure" "--%{lambda-term:enable}%-build-rmp" "--prefix" prefix]
-  ["ocaml" "setup.ml" "-build"]
+  ["ocaml" "setup.ml" "-configure" "--prefix" prefix]
+  ["make"]
 ]
 install: [
   ["ocaml" "setup.ml" "-install"]

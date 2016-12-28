@@ -12,10 +12,6 @@ Synopsis:    GDB/MI (machine interface) library
 Description: GDB/MI allows to programmatically control GNU debugger, useful application
   being a stack-sampling profiler.
 
-Flag build_rmp
-  Description: Rich man's profiler
-  Default: true
-
 Library gdb
   Path: src/
   Modules: Gdb, Gdbmi_types, Gdbmi_proto
@@ -24,7 +20,6 @@ Library gdb
   BuildDepends: extlib, lwt.unix, lwt.ppx, ppx_deriving
 
 Executable rmp
-  Build$: flag(build_rmp)
   Path: cli/
   MainIs: rmp.ml
   CompiledObject: best

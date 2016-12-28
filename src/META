@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: 8d067a2bfe6c39ac11f42596e44af3f2)
+version = "0.3"
+description = "GDB/MI (machine interface) library"
+requires = "extlib lwt.unix lwt.ppx ppx_deriving"
+archive(byte) = "gdb.cma"
+archive(byte, plugin) = "gdb.cma"
+archive(native) = "gdb.cmxa"
+archive(native, plugin) = "gdb.cmxs"
+exists_if = "gdb.cma"
+# OASIS_STOP
+
