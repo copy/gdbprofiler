@@ -3,8 +3,8 @@ sh .travis-ocaml.sh
 
 eval `opam config env`
 
-#opam pin add --yes -n $(pwd)
-#opam install --yes gdb
+opam pin add --yes -n $(pwd)
+opam install --yes gdb
 
-opam install --yes menhir extlib lwt ppx_deriving ppx_deriving_yojson ppx_tools oasis cppo containers
-make
+#opam install --yes menhir extlib lwt ppx_deriving ppx_deriving_yojson oasis containers
+#make
