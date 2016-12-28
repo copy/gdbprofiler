@@ -77,8 +77,7 @@ let pmp pid cpuprofile_file callgrind_file =
   let%lwt gdb = Gdb.launch () in
   log "launched";
   begin
-(*     let%lwt _ = Gdb.mi gdb "gdb-set" ["mi-async"; "on"] in *)
-    let%lwt () = Gdb.run gdb "attach %d" pid in
+    let%lwt _result = Gdb.mi gdb "target-attach" [string_of_int pid] in
     log "attached";
     let h = Hashtbl.create 10 in
     let records = ref [] in
@@ -88,7 +87,7 @@ let pmp pid cpuprofile_file callgrind_file =
       | true -> Lwt.return ()
       | false ->
       log "continuing ...";
-      let%lwt () = try%lwt Gdb.run gdb "continue" with e -> log "Exception while running continue: %s" @@ Printexc.to_string e; Lwt.return_unit in (* TODO check running *)
+      let%lwt _result = Gdb.mi gdb "exec-continue" [] in
       log "continued";
 (*       let%lwt () = Lwt_unix.sleep (CCFloat.max 0.001 (next_tick -. Unix.gettimeofday ())) in *)
       let%lwt () = Lwt_unix.sleep 0.001 in
