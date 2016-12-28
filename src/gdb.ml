@@ -76,8 +76,8 @@ let read_input gdb =
 let inferior gdb = gdb.proc
 let execute gdb s = let%lwt () = send_command gdb s in read_input gdb
 
-let launch ?dump () =
-  let proc = Lwt_process.open_process ("",[|"gdb"; "--interpreter=mi"|]) in
+let launch ?dump ~debugger () =
+  let proc = Lwt_process.open_process ("", debugger) in
   let dump =
     match dump with
     | None -> None

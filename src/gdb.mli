@@ -10,7 +10,7 @@ val send_command : gdb -> string -> unit Lwt.t
 val read_input : gdb -> Types.output_record list Lwt.t
 
 (** launch GDB *)
-val launch : ?dump:string -> unit -> gdb Lwt.t
+val launch : ?dump:string -> debugger:string array -> unit -> gdb Lwt.t
 
 (** terminate GDB session and process *)
 val quit : gdb -> unit Lwt.t

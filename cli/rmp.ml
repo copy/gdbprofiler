@@ -52,32 +52,56 @@ let rec sample gdb =
     List.iter (fun r -> log "%s" @@ Gdb.Types.show_output_record r) lines;
     Gdb.Cmd.stack_list_frames gdb
 
+
 let save_profile records end_time cpuprofile_file callgrind_file =
   let start_create_cpuprofile = Unix.gettimeofday () in
   let profile, node = Cpuprofile.of_frames records end_time in
   let took = Unix.gettimeofday () -. start_create_cpuprofile in
   log "creating profile took %f" @@ took;
-  let%lwt () = if cpuprofile_file = "" then Lwt.return_unit else
+  let%lwt () = match cpuprofile_file with
+    | None -> Lwt.return_unit
+    | Some cpuprofile_file ->
       Lwt_io.with_file ~mode:Lwt_io.Output cpuprofile_file begin fun channel ->
-      Printf.printf "%s written\n" @@ cpuprofile_file;
-      Lwt_io.write channel @@ Yojson.Safe.to_string (Cpuprofile.to_yojson profile)
-    end
+        Printf.printf "%s written\n" @@ cpuprofile_file;
+        Lwt_io.write channel @@ Yojson.Safe.to_string (Cpuprofile.to_yojson profile)
+      end
   in
-  let%lwt () = if callgrind_file = "" then Lwt.return_unit else
-    Lwt_io.with_file ~mode:Lwt_io.Output callgrind_file begin fun channel ->
-      Printf.printf "%s written\n" @@ callgrind_file;
-      Lwt_io.write channel @@ Callgrind.of_node node
-    end
+  let%lwt () = match callgrind_file with
+    | None -> Lwt.return_unit
+    | Some callgrind_file ->
+      Lwt_io.with_file ~mode:Lwt_io.Output callgrind_file begin fun channel ->
+        Printf.printf "%s written\n" @@ callgrind_file;
+        Lwt_io.write channel @@ Callgrind.of_node node
+      end
   in
   Lwt.return_unit
 
-let pmp pid cpuprofile_file callgrind_file =
-  let%lwt () = Lwt_io.print "Press enter to stop\n" in
+
+let check_result = function
+  | Gdbmi_types.Done vars -> Lwt.return_unit
+  | Connected -> Lwt.return_unit
+  | OpError (err, _) -> Lwt.fail_with err
+  | Exit -> Lwt.return_unit
+
+
+let pmp debugger_type debugger_path pid cpuprofile_file callgrind_file =
+  let%lwt () = Lwt_io.printl "Press enter to stop" in
   log "starting";
-  let%lwt gdb = Gdb.launch () in
+  let debugger = match debugger_type, debugger_path with
+    | `Gdb, None ->
+      [| "gdb"; "--interpreter=mi"; "-n" |]
+    | `Gdb, Some path ->
+      [| path; "--interpreter=mi"; "-n" |]
+    | `Lldb, None ->
+      [| "lldb-mi" |]
+    | `Lldb, Some path ->
+      [| path |]
+  in
+  let%lwt gdb = Gdb.launch ~debugger () in
   log "launched";
   begin
-    let%lwt _result = Gdb.mi gdb "target-attach" [string_of_int pid] in
+    let%lwt result = Gdb.mi gdb "target-attach" [string_of_int pid] in
+    let%lwt () = check_result result in
     log "attached";
     let h = Hashtbl.create 10 in
     let records = ref [] in
@@ -87,7 +111,8 @@ let pmp pid cpuprofile_file callgrind_file =
       | true -> Lwt.return ()
       | false ->
       log "continuing ...";
-      let%lwt _result = Gdb.mi gdb "exec-continue" [] in
+      let%lwt result = Gdb.mi gdb "exec-continue" [] in
+      let%lwt () = check_result result in
       log "continued";
 (*       let%lwt () = Lwt_unix.sleep (CCFloat.max 0.001 (next_tick -. Unix.gettimeofday ())) in *)
       let%lwt () = Lwt_unix.sleep 0.001 in
@@ -107,6 +132,7 @@ let pmp pid cpuprofile_file callgrind_file =
     in
     let wait_for_stop () =
       let%lwt _ = Lwt_io.read_char Lwt_io.stdin in
+      let%lwt () = Lwt_io.printl "Exiting ..." in
       Lwt.return_unit
     in
     let%lwt () = Lwt.pick [loop_sampling (Unix.gettimeofday () +. 0.010); wait_for_stop ()] in
@@ -136,6 +162,8 @@ let () =
   let pid = ref (-1) in
   let callgrind_file = ref "" in
   let cpuprofile_file = ref "" in
+  let debugger = ref "" in
+  let use_lldb = ref false in
   let spec = [
     "-p", Arg.Set_int pid,
       ": process id (pid)";
@@ -143,15 +171,25 @@ let () =
       ": Write out cpuprofile file to the given path (can be opened with Chromium)";
     "--callgrind", Arg.Set_string callgrind_file,
       ": Write out callgrind file to the given path (can be opened with kcachegrind)";
+    "--use-lldb", Arg.Set use_lldb,
+      ": pass this to use lldb instead of gdb";
+    "--debugger", Arg.Set_string debugger,
+      ": the debugger to invoke. " ^
+      "Defaults to 'lldb-mi' if --use-lldb is passed and 'gdb' otherwise";
   ]
   in
-  let usage = "Usage: rmp -p <pid> [--cpuprofile path] [--callgrind path]" in
+  let usage = "Usage: rmp -p <pid> [--use-lldb] [--debugger path] " ^
+              "[--cpuprofile path] [--callgrind path]" in
   Arg.parse spec (fun _ -> ()) usage;
-  if !callgrind_file = "" && !cpuprofile_file = "" then begin
+  let debugger_type = if !use_lldb then `Lldb else `Gdb in
+  let debugger = if !debugger = "" then None else Some !debugger in
+  let callgrind_file = if !callgrind_file = "" then None else Some !callgrind_file in
+  let cpuprofile_file = if !cpuprofile_file = "" then None else Some !cpuprofile_file in
+  if callgrind_file = None && cpuprofile_file = None then begin
     prerr_endline "Warning: No output file specified"
   end;
   if !pid = -1 then begin
     Arg.usage spec usage
   end
   else
-    Lwt_main.run @@ pmp !pid !cpuprofile_file !callgrind_file
+    Lwt_main.run @@ pmp debugger_type debugger !pid cpuprofile_file callgrind_file
