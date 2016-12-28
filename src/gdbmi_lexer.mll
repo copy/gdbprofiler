@@ -46,6 +46,7 @@ and c_unescape = parse
   | '"'         { "\"" }
   | 'n'         { "\n" }
   | 't'         { "\t" }
+  | '\\'        { "\\" }
   | _           { error "unrecognized escape sequence" }
 
 and c_string acc = parse
