@@ -5,7 +5,8 @@ This is a fork of https://github.com/ygrek/ocaml-gdb, a gdb-based profiler for
 native OCaml programs. Support for writing cpuprofile files has been added,
 which can be viewed in Chromium's dev tools (press F12). It also supports
 writing callgrind files, which can be viewed using
-[https://kcachegrind.github.io/html/Home.html](kachegrind).
+[https://kcachegrind.github.io/html/Home.html](kachegrind). Additionally, support for lldb has been
+added (by passing the `--use-lldb` command line argument).
 
 Quick start
 -----------
@@ -13,15 +14,13 @@ Quick start
 RMP doesn't require instrumentation. Compile your code to native binaries. Optionally, add
 `-g` in ocamlc or `-tag debug` in ocamlbuild to see source code locations.
 
-Install dependencies: `opam install menhir extlib lwt ppx_deriving ppx_deriving_yojson ppx_tools oasis cppo containers`
+Installation: `git clone https://github.com/copy/rmp && opam pin add rmp`
 
-Installation: `git clone https://github.com/copy/rmp && cd rmp && make`
-
-Usage: `rmp.native -p <pid> --cpuprofile <path> --callgrind <path>`
+Usage: `rmp -p <pid> [--use-lldb] [--debugger path] [--cpuprofile path] [--callgrind path]`
 
 Example:  ```rmp.native -p `pidof my_example_program.native` --cpuprofile example.cpuprofile --callgrind callgrind.out```
 
-If you're getting a "not permitted" error, run the following:
+If you're getting a "not permitted" error on Linux, run the following:
 `su -c 'sysctlkernel.yama.ptrace_scope=0'`
 ([https://rajeeshknambiar.wordpress.com/2015/07/16/attaching-debugger-and-ptrace_scope/](more
 infos))
