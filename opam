@@ -21,9 +21,7 @@ depends: [
   ("extlib"|"extlib-compat")
   "lwt" {>= "2.4.6"}
   "ppx_deriving_yojson" {>= "2.0"}
-  "ppx_tools" {build & >= "0.99.1"}
   "oasis" {build & >= "0.4"}
-  "cppo" {build}
   "containers"
 ]
 available: [ocaml-version >= "4.02.0"]

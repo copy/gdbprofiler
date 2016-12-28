@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: fddce9db9c18880e171dd74a115c8b0b)
+# DO NOT EDIT (digest: 6ea1d95ae8616dacc5f0c88060c1621c)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -14,16 +14,12 @@ true: annot, bin_annot
 ".git": not_hygienic
 "_darcs": -traverse
 "_darcs": not_hygienic
-# Executable ppx_inject
-"ppx/ppx_inject.byte": package(ppx_tools)
-<ppx/*.ml{,i,y}>: package(ppx_tools)
 # Library gdb
 "src/gdb.cmxs": use_gdb
 <src/*.ml{,i,y}>: package(extlib)
 <src/*.ml{,i,y}>: package(lwt.ppx)
 <src/*.ml{,i,y}>: package(lwt.unix)
 <src/*.ml{,i,y}>: package(ppx_deriving)
-<src/*.ml{,i,y}>: package(ppx_tools)
 # Executable rmp
 <cli/rmp.{native,byte}>: package(containers)
 <cli/rmp.{native,byte}>: package(containers.data)
@@ -32,7 +28,6 @@ true: annot, bin_annot
 <cli/rmp.{native,byte}>: package(lwt.unix)
 <cli/rmp.{native,byte}>: package(ppx_deriving)
 <cli/rmp.{native,byte}>: package(ppx_deriving_yojson)
-<cli/rmp.{native,byte}>: package(ppx_tools)
 <cli/rmp.{native,byte}>: use_gdb
 <cli/*.ml{,i,y}>: package(containers)
 <cli/*.ml{,i,y}>: package(containers.data)
@@ -41,7 +36,6 @@ true: annot, bin_annot
 <cli/*.ml{,i,y}>: package(lwt.unix)
 <cli/*.ml{,i,y}>: package(ppx_deriving)
 <cli/*.ml{,i,y}>: package(ppx_deriving_yojson)
-<cli/*.ml{,i,y}>: package(ppx_tools)
 <cli/*.ml{,i,y}>: use_gdb
 # OASIS_STOP
 <src/gdbmi_parser.ml>: warn(-45)
@@ -50,4 +44,3 @@ true: annot, bin_annot
 <src/*.mly>: explain
 true: use_menhir
 true: debug, annot, warn(+a-4-40-42)
-<src/gdbmi_proto.ml>: ppx(ppx/ppx_inject.byte), pp_cppo

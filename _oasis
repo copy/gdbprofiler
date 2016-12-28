@@ -16,7 +16,7 @@ Library gdb
   Path: src/
   Modules: Gdb, Gdbmi_types, Gdbmi_proto
   InternalModules: Gdbmi_parser, Gdbmi_lexer, Gdbmi_utils
-  BuildTools: menhir, cppo, ppx_inject
+  BuildTools: menhir
   BuildDepends: extlib, lwt.unix, lwt.ppx, ppx_deriving
 
 Executable rmp
@@ -24,9 +24,3 @@ Executable rmp
   MainIs: rmp.ml
   CompiledObject: best
   BuildDepends: gdb, ppx_deriving_yojson, containers, containers.data
-
-Executable ppx_inject
-  Path: ppx/
-  MainIs: ppx_inject.ml
-  CompiledObject: byte
-  BuildDepends: ppx_tools
