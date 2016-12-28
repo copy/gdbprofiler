@@ -90,7 +90,7 @@ let launch ?dump ~debugger () =
 (*   let%lwt _ = execute gdb "shell date" in (* FIXME shell *) *)
   Lwt.return gdb
 
-let quit gdb = (* FIXME wait -> timeout -> kill *)
+let quit gdb =
   let finish_dump () =
     match gdb.dump with
     | Some (temp, final, ch) ->
@@ -99,7 +99,7 @@ let quit gdb = (* FIXME wait -> timeout -> kill *)
       Sys.rename temp final
     | None -> ()
   in
-  let%lwt (_:'a list) = execute gdb "quit" in
+  let%lwt (_:'a list) = Lwt_unix.with_timeout 10.0 (fun () -> execute gdb "quit") in
   finish_dump ();
   Lwt.return gdb.proc#terminate
 
