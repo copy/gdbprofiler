@@ -11,12 +11,13 @@ let () =
   |]
   in
   let rmp_stdin, rmp_stdin_write = Unix.pipe () in
-  let _rmp_pid = Unix.create_process "./rmp.native" rmp_args rmp_stdin Unix.stdout Unix.stdout in
+  let rmp_pid = Unix.create_process "./rmp.native" rmp_args rmp_stdin Unix.stdout Unix.stdout in
   Unix.sleep 5;
   let written = Unix.write rmp_stdin_write "\n" 0 1 in (* send enter to stop *)
   assert (written = 1);
   Unix.kill sleep_pid 2;
-  Unix.sleep 1;
+  let _pid, status = Unix.waitpid [] rmp_pid in
   assert (CCIO.File.exists cpuprofile);
   assert (CCIO.File.exists callgrind);
+  assert (status = Unix.WEXITED 0);
   ()
