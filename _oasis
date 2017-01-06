@@ -17,7 +17,7 @@ Library gdb
   Modules: Gdb, Gdbmi_types, Gdbmi_proto
   InternalModules: Gdbmi_parser, Gdbmi_lexer, Gdbmi_utils
   BuildTools: menhir
-  BuildDepends: extlib, lwt.unix, lwt.ppx, ppx_deriving
+  BuildDepends: extlib, lwt.unix, lwt.ppx, ppx_deriving, ppx_deriving.show
 
 Executable rmp
   Path: cli/
