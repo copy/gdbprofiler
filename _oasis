@@ -24,3 +24,11 @@ Executable rmp
   MainIs: rmp.ml
   CompiledObject: best
   BuildDepends: gdb, ppx_deriving_yojson, containers, containers.data
+
+Executable run_integration_test
+  Path:             test/
+  Install:          false
+  CompiledObject:   best
+  MainIs:           run_integration_test.ml
+  BuildDepends:     containers
+  BuildTools:       rmp
