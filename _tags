@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 6ea1d95ae8616dacc5f0c88060c1621c)
+# DO NOT EDIT (digest: 98f843a29a82a3826233f29ec3f3b69b)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -20,6 +20,7 @@ true: annot, bin_annot
 <src/*.ml{,i,y}>: package(lwt.ppx)
 <src/*.ml{,i,y}>: package(lwt.unix)
 <src/*.ml{,i,y}>: package(ppx_deriving)
+<src/*.ml{,i,y}>: package(ppx_deriving.show)
 # Executable rmp
 <cli/rmp.{native,byte}>: package(containers)
 <cli/rmp.{native,byte}>: package(containers.data)
@@ -27,6 +28,7 @@ true: annot, bin_annot
 <cli/rmp.{native,byte}>: package(lwt.ppx)
 <cli/rmp.{native,byte}>: package(lwt.unix)
 <cli/rmp.{native,byte}>: package(ppx_deriving)
+<cli/rmp.{native,byte}>: package(ppx_deriving.show)
 <cli/rmp.{native,byte}>: package(ppx_deriving_yojson)
 <cli/rmp.{native,byte}>: use_gdb
 <cli/*.ml{,i,y}>: package(containers)
@@ -35,8 +37,30 @@ true: annot, bin_annot
 <cli/*.ml{,i,y}>: package(lwt.ppx)
 <cli/*.ml{,i,y}>: package(lwt.unix)
 <cli/*.ml{,i,y}>: package(ppx_deriving)
+<cli/*.ml{,i,y}>: package(ppx_deriving.show)
 <cli/*.ml{,i,y}>: package(ppx_deriving_yojson)
 <cli/*.ml{,i,y}>: use_gdb
+# Executable run_integration_test
+<test/run_integration_test.{native,byte}>: package(containers)
+<test/run_integration_test.{native,byte}>: package(containers.data)
+<test/run_integration_test.{native,byte}>: package(extlib)
+<test/run_integration_test.{native,byte}>: package(lwt.ppx)
+<test/run_integration_test.{native,byte}>: package(lwt.unix)
+<test/run_integration_test.{native,byte}>: package(ppx_deriving)
+<test/run_integration_test.{native,byte}>: package(ppx_deriving.show)
+<test/run_integration_test.{native,byte}>: package(ppx_deriving_yojson)
+<test/run_integration_test.{native,byte}>: package(process)
+<test/run_integration_test.{native,byte}>: use_gdb
+<test/*.ml{,i,y}>: package(containers)
+<test/*.ml{,i,y}>: package(containers.data)
+<test/*.ml{,i,y}>: package(extlib)
+<test/*.ml{,i,y}>: package(lwt.ppx)
+<test/*.ml{,i,y}>: package(lwt.unix)
+<test/*.ml{,i,y}>: package(ppx_deriving)
+<test/*.ml{,i,y}>: package(ppx_deriving.show)
+<test/*.ml{,i,y}>: package(ppx_deriving_yojson)
+<test/*.ml{,i,y}>: package(process)
+<test/*.ml{,i,y}>: use_gdb
 # OASIS_STOP
 <src/gdbmi_parser.ml>: warn(-45)
 <src/gdbmi_types.ml>: pkg_ppx_deriving.std
