@@ -1,3 +1,12 @@
+let rec wait_for_termination ~timeout pid =
+  let new_pid, status = Unix.waitpid [Unix.WNOHANG] pid in
+  if new_pid <> 0 then
+    (assert (new_pid = pid); `Stopped status)
+  else if timeout <= 0 then
+    `Not_stopped
+  else
+    (Unix.sleep 1; wait_for_termination pid ~timeout:(timeout - 1))
+
 let () =
   let null = Unix.openfile "/dev/null" [] 0o777 in
   let sleep_pid = Unix.create_process "sleep" [| "sleep"; "99999"; |] null Unix.stdout Unix.stdout in
@@ -12,12 +21,18 @@ let () =
   in
   let rmp_stdin, rmp_stdin_write = Unix.pipe () in
   let rmp_pid = Unix.create_process "./rmp.native" rmp_args rmp_stdin Unix.stdout Unix.stdout in
+  print_endline "Sleeping";
   Unix.sleep 5;
+  print_endline "Sending enter";
   let written = Unix.write rmp_stdin_write "\n" 0 1 in (* send enter to stop *)
   assert (written = 1);
+  print_endline "Killing child";
   Unix.kill sleep_pid 2;
-  let _pid, status = Unix.waitpid [] rmp_pid in
-  assert (CCIO.File.exists cpuprofile);
-  assert (CCIO.File.exists callgrind);
-  assert (status = Unix.WEXITED 0);
-  ()
+  print_endline "Waiting for termination of rmp";
+  match wait_for_termination ~timeout:30 rmp_pid with
+  | `Not_stopped ->
+    assert false
+  | `Stopped status ->
+    assert (CCIO.File.exists cpuprofile);
+    assert (CCIO.File.exists callgrind);
+    assert (status = Unix.WEXITED 0)
