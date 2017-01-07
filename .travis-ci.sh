@@ -7,7 +7,7 @@ opam pin add --yes -n $(pwd)
 opam install --yes gdb
 
 make
-./run_integration_test.native
+RMP_LOG_VERBOSE=1 ./run_integration_test.native
 
 #opam install --yes menhir extlib lwt ppx_deriving ppx_deriving_yojson oasis containers
 #make

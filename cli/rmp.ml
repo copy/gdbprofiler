@@ -4,13 +4,12 @@ module String = ExtLib.String
 let printfn fmt = ksprintf print_endline fmt
 let eprintfn fmt = ksprintf prerr_endline fmt
 
-let log_verbose = false
-
+let log_verbose = try ignore @@ Sys.getenv "RMP_LOG_VERBOSE"; true with Not_found -> false
 let section = Lwt_log.Section.make "gdb"
-let () = if log_verbose then Lwt_log.Section.set_level section Lwt_log.Debug
-let logger = Lwt_main.run @@ Lwt_log.file ~mode:`Append ~file_name:"rmp.log" ()
+let () = Lwt_log.Section.set_level section (if log_verbose then Lwt_log.Debug else Lwt_log.Warning)
+let logger = Lwt_log.channel ~close_mode:`Keep ~channel:Lwt_io.stdout ()
 let log fmt = Lwt_log.ign_debug_f ~logger ~section (fmt ^^ "\n")
-(* let log fmt = Printf.eprintf (fmt ^^ "\n") *)
+
 
 let show_frame_cached =
   let eq (f1 : Gdb.Proto.frame) (f2 : Gdb.Proto.frame) = f1.func = f2.func && f1.from = f2.from in
