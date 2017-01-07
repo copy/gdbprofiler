@@ -7,13 +7,6 @@ let file (frame : Gdbmi_proto.frame) =
   | (Some f, _, _) | (_, Some f, _) | (_, _, Some f) -> f
   | _ -> ""
 
-type entry = {
-  total : float;
-  hits : int;
-  children : string list;
-  frame : Gdbmi_proto.frame;
-}
-
 let rec iter_tree f (t : Cpuprofile.node) =
   f t;
   List.iter (fun t' -> iter_tree f t') t.children
