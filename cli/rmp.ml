@@ -120,7 +120,7 @@ let pmp debugger_type debugger_path pid cpuprofile_file callgrind_file =
       let time = Unix.gettimeofday () in
       let%lwt frames = sample gdb in
       let frames = Gdb.collapse_recursive_frames frames in
-      records := (frames, time, 0) :: !records;
+      records := (frames, time) :: !records;
       log "sampled gdb";
       Hashtbl.replace h frames @@ ExtLib.Hashtbl.find_default h frames 0 + 1;
       log "%d entries" (Hashtbl.length h);

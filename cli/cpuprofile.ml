@@ -1,3 +1,5 @@
+type time = float
+
 type position_tick = {
   line: int;
   ticks: int;
@@ -30,7 +32,6 @@ type node = {
   position_ticks: position_tick list;
   time: float;
   total_time: float;
-  self_size: int; (* only for memory .heapprofile *)
   address: int;
   full_name: string;
   children: node list;
@@ -67,7 +68,6 @@ let create_node name ~node_id ~call_id =
     position_ticks = [];
     time = 0.0;
     total_time = 0.0;
-    self_size = 0;
     address = 0;
     full_name = "";
     children = [];
@@ -117,13 +117,12 @@ let of_frames records end_time =
       else
         tick :: bump_position_ticks rest line
   in
-  let rec add_frames_to_node node time allocation frames =
+  let rec add_frames_to_node node time frames =
     match frames with
     | [] ->
       { node with
         hit_count = node.hit_count + 1;
         total_hit_count = node.total_hit_count + 1;
-        self_size = node.self_size + allocation;
         time;
       }, node.id
     | (frame : Gdbmi_proto.frame) :: remaining_frames ->
@@ -160,11 +159,11 @@ let of_frames records end_time =
             position_ticks;
           }
           in
-          let node, sample_id = add_frames_to_node node time allocation remaining_frames in
+          let node, sample_id = add_frames_to_node node time remaining_frames in
           [node], sample_id
         | child :: rest ->
           if child.call_uid = call_id then
-            let node, sample_id = add_frames_to_node child time allocation remaining_frames in
+            let node, sample_id = add_frames_to_node child time remaining_frames in
             let sample_id = if remaining_frames = [] then child.id else sample_id in
             let line = CCOpt.get_or ~default:1 frame.line in
             let node =
@@ -186,19 +185,19 @@ let of_frames records end_time =
   in
   let rec calculate_time_deltas = function
     | [] -> []
-    | (frames, time, allocation) :: [] ->
-      [(frames, end_time -. time, allocation)]
-    | (frames, time, allocation) :: ((_, next_time, _) as next) :: rest ->
-      (frames, next_time -. time, allocation) :: calculate_time_deltas (next :: rest)
+    | (frames, time) :: [] ->
+      [(frames, end_time -. time)]
+    | (frames, time) :: ((_, next_time) as next) :: rest ->
+      (frames, next_time -. time) :: calculate_time_deltas (next :: rest)
   in
-  let root, samples = List.fold_left begin fun (node, samples) (frames, time, allocation) ->
+  let root, samples = List.fold_left begin fun (node, samples) (frames, time) ->
       assert (time >= 0.);
       let frames = List.rev frames in
-      let node, sample_id = add_frames_to_node node time allocation frames in
+      let node, sample_id = add_frames_to_node node time frames in
       node, sample_id :: samples
     end (root, []) (calculate_time_deltas records)
   in
-  let _, start_time, _ = match CCList.head_opt records with Some r -> r | None -> assert false in
+  let _, start_time = match CCList.head_opt records with Some r -> r | None -> assert false in
   assert (start_time <= end_time);
   let to_microsecond t = Int64.of_float (t *. 1000. *. 1000.) in
   ({
@@ -206,5 +205,5 @@ let of_frames records end_time =
     start_time;
     end_time;
     samples;
-    timestamps = List.map (fun (_, t, _) -> to_microsecond t) records;
+    timestamps = List.map (fun (_, t) -> to_microsecond t) records;
   }, root)

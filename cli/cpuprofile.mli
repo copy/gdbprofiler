@@ -1,3 +1,5 @@
+type time = float
+
 type position_tick = { line : int; ticks : int; }
 type node = {
   function_name : string;
@@ -12,7 +14,6 @@ type node = {
   position_ticks : position_tick list;
   time : float;
   total_time : float;
-  self_size : int;
   address : int;
   full_name : string;
   children : node list;
@@ -21,11 +22,11 @@ type node = {
 type fn
 type t = {
   head : fn;
-  start_time : float;
-  end_time : float;
+  start_time : time;
+  end_time : time;
   samples : int list;
   timestamps : Int64.t list;
 }
 
-val of_frames : (Gdbmi_proto.frame list * float * int) CCList.t -> float -> t * node
+val of_frames : (Gdbmi_proto.frame list * time) list -> time -> t * node
 val to_yojson : t -> Yojson.Safe.json
