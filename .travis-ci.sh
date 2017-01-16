@@ -7,4 +7,4 @@ opam pin add --yes -n $(pwd)
 opam install --yes gdb
 
 make
-./run_integration_test.native
+./run_unit_test.native
