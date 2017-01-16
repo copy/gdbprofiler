@@ -19,11 +19,16 @@ Library gdb
   BuildTools: menhir
   BuildDepends: extlib, lwt.unix, lwt.ppx, ppx_deriving, ppx_deriving.show
 
+Library rmp_lib
+  Path: rmp/
+  Modules: Callgrind, Cpuprofile
+  BuildDepends: gdb, ppx_deriving_yojson, containers, containers.data
+
 Executable rmp
   Path: cli/
   MainIs: rmp.ml
   CompiledObject: best
-  BuildDepends: gdb, ppx_deriving_yojson, containers, containers.data
+  BuildDepends: gdb, rmp_lib
 
 Executable run_integration_test
   Path:             test/
@@ -32,3 +37,10 @@ Executable run_integration_test
   MainIs:           run_integration_test.ml
   BuildDepends:     containers
   BuildTools:       rmp
+
+Executable run_unit_test
+  Path:             test/
+  Install:          false
+  CompiledObject:   best
+  MainIs:           run_unit_test.ml
+  BuildDepends:     rmp_lib, gdb, containers

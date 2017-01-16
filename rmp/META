@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: f41d3ba0cd66ae12144ede61efd10a63)
+version = "0.3"
+description = "GDB/MI (machine interface) library"
+requires = "gdb ppx_deriving_yojson containers containers.data"
+archive(byte) = "rmp_lib.cma"
+archive(byte, plugin) = "rmp_lib.cma"
+archive(native) = "rmp_lib.cmxa"
+archive(native, plugin) = "rmp_lib.cmxs"
+exists_if = "rmp_lib.cma"
+# OASIS_STOP
+
