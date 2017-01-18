@@ -1,5 +1,5 @@
-Rich man's profiler
-===================
+GDB profiler
+============
 
 This is a fork of https://github.com/ygrek/ocaml-gdb, a gdb-based profiler for
 native OCaml programs. Support for writing cpuprofile files has been added,
@@ -11,14 +11,14 @@ added (by passing the `--use-lldb` command line argument).
 Quick start
 -----------
 
-RMP doesn't require instrumentation. Compile your code to native binaries. Optionally, add
+gdbprofiler doesn't require instrumentation. Compile your code to native binaries. Optionally, add
 `-g` in ocamlc or `-tag debug` in ocamlbuild to see source code locations.
 
-Installation: `git clone https://github.com/copy/rmp && opam pin add rmp`
+Installation: `git clone https://github.com/copy/gdbprofiler && cd gdbprofiler && opam pin add .`
 
-Usage: `rmp -p <pid> [--use-lldb] [--debugger path] [--cpuprofile path] [--callgrind path]`
+Usage: `gdbprofiler -p <pid> [--use-lldb] [--debugger path] [--cpuprofile path] [--callgrind path]`
 
-Example:  ```rmp.native -p `pidof my_example_program.native` --cpuprofile example.cpuprofile --callgrind callgrind.out```
+Example:  ```gdbprofiler -p `pidof my_example_program.native` --cpuprofile example.cpuprofile --callgrind callgrind.out```
 
 If you're getting a "not permitted" error on Linux, run the following:
 `su -c 'sysctlkernel.yama.ptrace_scope=0'`

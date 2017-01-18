@@ -1,19 +1,18 @@
 OASISFormat: 0.4
-Name:        gdb
+Name:        gdbprofiler
 Version:     0.3
-Authors:     ygrek
-Homepage:    https://github.com/ygrek/ocaml-gdb
+Authors:     copy
+Homepage:    https://github.com/copy/gdbprofiler
 License:     LGPL-2.1 with OCaml linking exception
 Plugins:     DevFiles (0.4), META (0.4)
 BuildTools:  ocamlbuild
 OCamlVersion: >= 4.02
 
-Synopsis:    GDB/MI (machine interface) library
-Description: GDB/MI allows to programmatically control GNU debugger, useful application
-  being a stack-sampling profiler.
+Synopsis: A profiler for native binaries using gdb
 
 Library gdb
   Path: src/
+  Install: false
   Modules: Gdb, Gdbmi_types, Gdbmi_proto
   InternalModules: Gdbmi_parser, Gdbmi_lexer, Gdbmi_utils
   BuildTools: menhir
@@ -21,10 +20,11 @@ Library gdb
 
 Library rmp_lib
   Path: rmp/
+  Install: false
   Modules: Callgrind, Cpuprofile
   BuildDepends: gdb, ppx_deriving_yojson, containers, containers.data
 
-Executable rmp
+Executable gdbprofiler
   Path: cli/
   MainIs: rmp.ml
   CompiledObject: best
@@ -35,7 +35,7 @@ Executable run_integration_test
   Install:          false
   CompiledObject:   best
   MainIs:           run_integration_test.ml
-  BuildDepends:     containers
+  BuildDepends:     containers, yojson, unix
   BuildTools:       rmp
 
 Executable run_unit_test

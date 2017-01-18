@@ -177,7 +177,7 @@ let () =
       "Defaults to 'lldb-mi' if --use-lldb is passed and 'gdb' otherwise";
   ]
   in
-  let usage = "Usage: rmp -p <pid> [--use-lldb] [--debugger path] " ^
+  let usage = "Usage: gdbprofiler -p <pid> [--use-lldb] [--debugger path] " ^
               "[--cpuprofile path] [--callgrind path]" in
   Arg.parse spec (fun _ -> ()) usage;
   let debugger_type = if !use_lldb then `Lldb else `Gdb in
