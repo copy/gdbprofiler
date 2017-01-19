@@ -3,7 +3,7 @@ sh .travis-ocaml.sh
 
 eval `opam config env`
 
-opam pin add --yes -n $(pwd)
+opam pin add --yes $(pwd)
 
 make
 ./run_unit_test.native
