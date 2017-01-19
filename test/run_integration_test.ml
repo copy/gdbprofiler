@@ -13,7 +13,7 @@ let () =
   let cpuprofile = "/tmp/rmp_integration_test.cpuprofile" in
   let callgrind =  "/tmp/rmp_integration_test.callgrind" in
   let rmp_args = [|
-    "./rmp.native";
+    "./gdbprofiler.native";
     "-p"; string_of_int sleep_pid;
     "--cpuprofile"; cpuprofile;
     "--callgrind"; callgrind;
@@ -26,7 +26,7 @@ let () =
   in
   CCFun.finally ~h:delete_temporary_files ~f:begin fun () ->
     print_endline "Now starting integration test. stdout of rmp is shown below";
-    let rmp_pid = Unix.create_process "./rmp.native" rmp_args rmp_stdin Unix.stdout Unix.stdout in
+    let rmp_pid = Unix.create_process "./gdbprofiler.native" rmp_args rmp_stdin Unix.stdout Unix.stdout in
     print_endline "Sleeping";
     Unix.sleep 5;
     print_endline "Sending enter";

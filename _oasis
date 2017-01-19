@@ -36,7 +36,7 @@ Executable run_integration_test
   CompiledObject:   best
   MainIs:           run_integration_test.ml
   BuildDepends:     containers, yojson, unix
-  BuildTools:       rmp
+  BuildTools:       gdbprofiler
 
 Executable run_unit_test
   Path:             test/

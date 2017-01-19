@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 0341403d5bd2971f668fc474e3b4cbdb)
+# DO NOT EDIT (digest: 8cef90448d953b474b05bc14b9b4dca3)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -55,8 +55,17 @@ true: annot, bin_annot
 <cli/*.ml{,i,y}>: use_rmp_lib
 # Executable run_integration_test
 <test/run_integration_test.{native,byte}>: package(containers)
+<test/run_integration_test.{native,byte}>: package(containers.data)
+<test/run_integration_test.{native,byte}>: package(extlib)
+<test/run_integration_test.{native,byte}>: package(lwt.ppx)
+<test/run_integration_test.{native,byte}>: package(lwt.unix)
+<test/run_integration_test.{native,byte}>: package(ppx_deriving)
+<test/run_integration_test.{native,byte}>: package(ppx_deriving.show)
+<test/run_integration_test.{native,byte}>: package(ppx_deriving_yojson)
 <test/run_integration_test.{native,byte}>: package(unix)
 <test/run_integration_test.{native,byte}>: package(yojson)
+<test/run_integration_test.{native,byte}>: use_gdb
+<test/run_integration_test.{native,byte}>: use_rmp_lib
 <test/*.ml{,i,y}>: package(unix)
 <test/*.ml{,i,y}>: package(yojson)
 # Executable run_unit_test
