@@ -14,7 +14,7 @@ Quick start
 gdbprofiler doesn't require instrumentation. Compile your code to native binaries. Optionally, add
 `-g` in ocamlc or `-tag debug` in ocamlbuild to see source code locations.
 
-Installation: `git clone https://github.com/copy/gdbprofiler && cd gdbprofiler && opam pin add .`
+Installation: `opam install gdbprofiler`
 
 Usage: `gdbprofiler -p <pid> [--use-lldb] [--debugger path] [--cpuprofile path] [--callgrind path]`
 
