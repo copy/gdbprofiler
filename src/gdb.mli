@@ -3,6 +3,7 @@ module Types = Gdbmi_types
 module Proto = Gdbmi_proto
 
 exception Parse_error of string * string * string
+exception Not_permitted
 
 (** type representing GDB/MI session *)
 type gdb
