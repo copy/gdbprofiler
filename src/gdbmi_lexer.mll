@@ -5,6 +5,7 @@
   let error callerID = failwith ("Lexer error : " ^ callerID)
 }
 
+let odigit = ['0'-'7']
 let digit = ['0'-'9']
 let alpha = ['a'-'z' 'A'-'Z']
 let ident = alpha (alpha | digit | '_' | '-' )*
@@ -47,6 +48,10 @@ and c_unescape = parse
   | 'n'         { "\n" }
   | 't'         { "\t" }
   | '\\'        { "\\" }
+  | (odigit odigit odigit) as s {
+      let c n = Char.code n - Char.code '0' in
+      String.make 1 (Char.chr (c s.[2] + c s.[1] * 8 + c s.[0] * 8 * 8))
+    }
   | _           { error "unrecognized escape sequence" }
 
 and c_string acc = parse
