@@ -171,16 +171,21 @@ let () =
   let use_lldb = ref false in
   let spec = [
     "-p", Arg.Set_int pid,
-      ": process id (pid)";
+    ": process id (pid)";
+
     "--cpuprofile", Arg.Set_string cpuprofile_file,
-      ": Write out cpuprofile file to the given path (can be opened with Chromium)";
+    ": Write out cpuprofile file to the given path (can be opened with Chromium)." ^
+    " Defaults to out.cpuprofile";
+
     "--callgrind", Arg.Set_string callgrind_file,
-      ": Write out callgrind file to the given path (can be opened with kcachegrind)";
+    ": Write out callgrind file to the given path (can be opened with kcachegrind)";
+
     "--use-lldb", Arg.Set use_lldb,
-      ": pass this to use lldb instead of gdb";
+    ": pass this to use lldb instead of gdb";
+
     "--debugger", Arg.Set_string debugger,
-      ": the debugger to invoke. " ^
-      "Defaults to 'lldb-mi' if --use-lldb is passed and 'gdb' otherwise";
+    ": the debugger to invoke. " ^
+    "Defaults to 'lldb-mi' if --use-lldb is passed and 'gdb' otherwise";
   ]
   in
   let usage = "Usage: gdbprofiler -p <pid> [--use-lldb] [--debugger path] " ^
@@ -189,10 +194,14 @@ let () =
   let debugger_type = if !use_lldb then `Lldb else `Gdb in
   let debugger = if !debugger = "" then None else Some !debugger in
   let callgrind_file = if !callgrind_file = "" then None else Some !callgrind_file in
-  let cpuprofile_file = if !cpuprofile_file = "" then None else Some !cpuprofile_file in
-  if callgrind_file = None && cpuprofile_file = None then begin
-    prerr_endline "Warning: No output file specified"
-  end;
+  let fix_extension name =
+    if CCString.suffix ~suf:".cpuprofile" name
+    then name
+    else name ^ ".cpuprofile"
+  in
+  let cpuprofile_file =
+    Some (if !cpuprofile_file = "" then "out.cpuprofile" else fix_extension !cpuprofile_file)
+  in
   if !pid = -1 then begin
     Arg.usage spec usage
   end
