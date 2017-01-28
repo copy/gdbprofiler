@@ -79,7 +79,13 @@ let save_profile records end_time cpuprofile_file callgrind_file =
 let check_result = function
   | Gdbmi_types.Done vars -> Lwt.return_unit
   | Connected -> Lwt.return_unit
-  | OpError (err, _) -> Lwt.fail_with err
+  | OpError (err, _) ->
+    begin match err with
+      | "ptrace: Operation not permitted." ->
+        Lwt.fail Gdb.Not_permitted
+      | _ ->
+        Lwt.fail_with (Printf.sprintf "OpError(%s)" err)
+    end
   | Exit -> Lwt.return_unit
 
 
@@ -191,4 +197,13 @@ let () =
     Arg.usage spec usage
   end
   else
-    Lwt_main.run @@ pmp debugger_type debugger !pid cpuprofile_file callgrind_file
+    try
+      Lwt_main.run @@ pmp debugger_type debugger !pid cpuprofile_file callgrind_file
+    with
+    | Gdb.Not_permitted ->
+      print_endline (
+        "Fatal:\n" ^
+        "Got 'ptrace: Operation not permitted'.\n" ^
+        "If you're on Linux, run `su -c 'sysctlkernel.yama.ptrace_scope=0'`\n" ^
+        "See https://rajeeshknambiar.wordpress.com/2015/07/16/attaching-debugger-and-ptrace_scope/ for more infos"
+      )
