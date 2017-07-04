@@ -10,19 +10,11 @@ let () = Lwt_log.Section.set_level section (if log_verbose then Lwt_log.Debug el
 let logger = Lwt_log.channel ~close_mode:`Keep ~channel:Lwt_io.stdout ()
 let log fmt = Lwt_log.ign_debug_f ~logger ~section (fmt ^^ "\n")
 
-
 let show_frame_cached =
   let eq (f1 : Gdb.Proto.frame) (f2 : Gdb.Proto.frame) = f1.func = f2.func && f1.from = f2.from in
   let hash (f : Gdb.Proto.frame) = Hashtbl.hash (f.func, f.from) in
   let cache = CCCache.unbounded ~eq ~hash 1024 in
   CCCache.with_cache cache Gdb.show_frame_function
-
-(** @return most frequent first *)
-let analyze h =
-  let total = Hashtbl.fold (fun _ count acc -> count + acc) h 0 in
-  Hashtbl.fold (fun k v acc -> (k, v) :: acc) h []
-  |> List.sort (fun (_,a) (_,b) -> compare b a)
-  |> List.map (fun (frames,n) -> sprintf "%5d (%5.1f%%) %s" n (float n /. float total *. 100.) (String.concat " " @@ List.map show_frame_cached frames))
 
 let print_frames frames =
   (String.concat " " @@ List.map Gdb.show_frame_function frames)
@@ -33,13 +25,12 @@ let print_frame frame =
     | Some x -> Printf.sprintf "Some(%s)" x
   in
   Printf.sprintf "{ level=%d addr=%s func=%s from=%s file=%s fullname=%s line=%d }"
-    frame.Gdbmi_proto.level frame.addr frame.func (print_opt frame.from) (print_opt frame.file) (print_opt frame.fullname)
+    frame.Gdbmi_proto.level frame.addr frame.func
+    (print_opt frame.from) (print_opt frame.file) (print_opt frame.fullname)
     (match frame.line with None -> 0 | Some l -> l)
 
 
 let rec sample gdb =
-  log "Sending sigint";
-  (Gdb.inferior gdb)#kill Sys.sigint;
   match%lwt Lwt_unix.with_timeout 0.1 begin fun () ->
       Gdb.execute gdb "" (* read notifications TODO check stopped *)
     end with
@@ -90,7 +81,6 @@ let check_result = function
 
 
 let pmp debugger_type debugger_path pid cpuprofile_file callgrind_file =
-  let%lwt () = Lwt_io.printl "Press enter to stop" in
   log "starting";
   let debugger = match debugger_type, debugger_path with
     | `Gdb, None ->
@@ -108,42 +98,44 @@ let pmp debugger_type debugger_path pid cpuprofile_file callgrind_file =
     let%lwt result = Gdb.mi gdb "target-attach" [string_of_int pid] in
     let%lwt () = check_result result in
     log "attached";
-    let h = Hashtbl.create 10 in
     let records = ref [] in
     let should_exit = ref false in
-    let rec loop_sampling next_tick =
+    let time = ref @@ Unix.gettimeofday () in
+    let%lwt () = Lwt_io.printl "Press enter to stop" in
+    let rec loop_sampling () =
       match !should_exit with
       | true -> Lwt.return ()
       | false ->
       log "continuing ...";
+      let run_start = Unix.gettimeofday () in
       let%lwt result = Gdb.mi gdb "exec-continue" [] in
       let%lwt () = check_result result in
       log "continued";
-(*       let%lwt () = Lwt_unix.sleep (CCFloat.max 0.001 (next_tick -. Unix.gettimeofday ())) in *)
       let%lwt () = Lwt_unix.sleep 0.001 in
-(*       let%lwt () = Lwt_unix.yield () in *)
+      log "Sending sigint (waking up)";
+      (Gdb.inferior gdb)#kill Sys.sigint;
+      let run_end = Unix.gettimeofday () in
       log "sampling gdb";
-      let time = Unix.gettimeofday () in
       let%lwt frames = sample gdb in
       let frames = Gdb.collapse_recursive_frames frames in
-      records := (frames, time) :: !records;
+      time := !time +. run_end -. run_start;
+      records := (frames, !time) :: !records;
       log "sampled gdb";
-      Hashtbl.replace h frames @@ ExtLib.Hashtbl.find_default h frames 0 + 1;
-      log "%d entries" (Hashtbl.length h);
       if log_verbose then log "frames: %s" @@ print_frames frames;
       if log_verbose then List.iter (fun frame -> log "frame: %s" @@ print_frame frame) frames;
       log "next iteration";
-      loop_sampling (next_tick +. 0.010)
+      loop_sampling ()
     in
     let wait_for_stop () =
       let%lwt _ = Lwt_io.read_char Lwt_io.stdin in
       let%lwt () = Lwt_io.printl "Exiting ..." in
+      should_exit := true;
       Lwt.return_unit
     in
-    let%lwt () = Lwt.pick [loop_sampling (Unix.gettimeofday () +. 0.010); wait_for_stop ()] in
+    let%lwt () = wait_for_stop () and () = loop_sampling () in
     let end_time = Unix.gettimeofday () in
-    save_profile (List.rev !records) end_time cpuprofile_file callgrind_file
-  end [%finally Gdb.quit gdb]
+    save_profile (List.rev !records) end_time cpuprofile_file callgrind_file;
+  end [%finally (Gdb.quit gdb)]
 
 
 let dump_file file =

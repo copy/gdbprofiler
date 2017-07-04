@@ -8,14 +8,15 @@ module Proto = Gdbmi_proto
 exception Parse_error of string * string * string
 
 exception Not_permitted
+exception Exited of Unix.process_status
 
 let log_verbose = false
 
 let section = Lwt_log.Section.make "gdb"
 let () = if log_verbose then Lwt_log.Section.set_level section Lwt_log.Debug
-let logger = Lwt_main.run @@ Lwt_log.file ~template:"$(date)+$(milliseconds) | $(name): $(message)" ~mode:`Append ~file_name:"gdb.log" ()
+let logger = Lwt_main.run @@ Lwt_log.file ~template:"$(date)+$(milliseconds) | $(name): $(message)"
+    ~mode:`Truncate ~file_name:"gdb.log" ()
 let log fmt = Lwt_log.ign_debug_f  ~logger ~section (fmt ^^ "\n")
-(* let log fmt = Printf.eprintf (fmt ^^ "\n") *)
 
 let eprintfn fmt = ksprintf prerr_endline fmt
 let lwt_fail fmt = ksprintf (fun s -> Lwt.fail (Failure s)) fmt
@@ -58,20 +59,29 @@ let read_input gdb =
   let rec loop acc =
     let%lwt s = try%lwt Lwt_io.read_line gdb.proc#stdout with End_of_file ->
       log "EOF";
-      Lwt.return "(gdb)"
+      Lwt.fail End_of_file
     in (* timeout? *)
     log "receive: %s" s;
     record gdb s;
     match String.strip s with
     | "" -> loop acc
     | {|&"ptrace: Operation not permitted.\n"|} ->
-      raise Not_permitted
+      Lwt.fail Not_permitted
     | "(gdb)" -> Lwt.return @@ List.rev acc
     | s ->
-      let r = try Some (parse_output s) with exn -> eprintfn "%s" (Printexc.to_string exn); None in
+      let r =
+        try
+          Some (parse_output s)
+        with exn -> eprintfn "Parse error: %s" (Printexc.to_string exn); None
+      in
       loop (match r with None -> acc | Some x -> x :: acc)
   in
-  loop []
+  match gdb.proc#state with
+  | Running ->
+    loop []
+  | Exited status ->
+    log "Exited with %s" "";
+    Lwt.fail (Exited status)
 
 let inferior gdb = gdb.proc
 let execute gdb s = let%lwt () = send_command gdb s in read_input gdb
@@ -99,7 +109,12 @@ let quit gdb =
       Sys.rename temp final
     | None -> ()
   in
-  let%lwt (_:'a list) = Lwt_unix.with_timeout 10.0 (fun () -> execute gdb "quit") in
+  log "quit";
+  let%lwt (_:'a list) =
+    try%lwt
+      Lwt_unix.with_timeout 10.0 (fun () -> execute gdb "quit")
+    with End_of_file -> Lwt.return []
+  in
   finish_dump ();
   Lwt.return gdb.proc#terminate
 
@@ -109,7 +124,9 @@ let mi gdb s args =
   let%lwt () = send_command gdb @@ String.concat " " (sprintf "%s-%s" token s :: args) in
   let rec loop () =
     let%lwt r = read_input gdb in (* skip until token matches *)
-    match List.filter_map (function Types.Result (Some x,r) when x = token -> Some r | _ -> None) r with
+    match
+      List.filter_map (function Types.Result (Some x,r) when x = token -> Some r | _ -> None) r
+    with
     | [] -> loop ()
     | x::_ -> Lwt.return x
   in
@@ -182,17 +199,6 @@ let run gdb cmd =
 
 let run gdb fmt = ksprintf (run gdb) fmt
 
-(*
-  if ( targ ~ /[<\\(]/ && targ !~ /^operator[<\\(]/ ) {
-     # Shorten C++ templates, e.g. in t/samples/stacktrace-004.txt
-     while ( targ ~ />( *\$|::)/ ) {
-        if ( 0 == gsub(/<[^<>]*>/, "", targ) ) {
-           break;
-        }
-     }
-  }
-*)
-
 let replace_all str sub by =
   let rec loop str =
     match String.replace ~str ~sub ~by with
@@ -233,7 +239,8 @@ let () = assert (unescape "abc$20XXX" = "abc XXX")
 
 let is_number s = try ignore (int_of_string s); true with _ -> false
 let truncate_at s sub = try fst @@ String.split s sub with _ -> s
-let drop_prefix s pre = if String.starts_with s pre then String.slice ~first:(String.length pre) s else s
+let drop_prefix s pre =
+  if String.starts_with s pre then String.slice ~first:(String.length pre) s else s
 
 let demangle s =
   if String.starts_with s "caml" && not (String.starts_with s "caml_") then
