@@ -213,6 +213,6 @@ let () =
       print_endline (
         "Fatal:\n" ^
         "Got 'ptrace: Operation not permitted'.\n" ^
-        "If you're on Linux, run `su -c 'sysctlkernel.yama.ptrace_scope=0'`\n" ^
+        "If you're on Linux, run `su -c 'sysctl kernel.yama.ptrace_scope=0'`\n" ^
         "See https://rajeeshknambiar.wordpress.com/2015/07/16/attaching-debugger-and-ptrace_scope/ for more infos"
       )
