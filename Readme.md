@@ -1,12 +1,18 @@
 GDB profiler
 ============
 
-This is a fork of https://github.com/ygrek/ocaml-gdb, a gdb-based profiler for
-native OCaml programs. Support for writing cpuprofile files has been added,
-which can be viewed in Chromium's dev tools (press F12). It also supports
-writing callgrind files, which can be viewed using
-[https://kcachegrind.github.io/html/Home.html](kachegrind). Additionally, support for lldb has been
-added (by passing the `--use-lldb` command line argument).
+This is a fork of Ygrek's [ocaml-gdb](https://github.com/ygrek/ocaml-gdb), a
+gdb-based profiler for native OCaml programs. Support for writing cpuprofile
+files has been added, which can be viewed in Chromium's DevTools, which can be
+opened by pressing F12 or navigating to [this
+page](chrome-devtools://devtools/bundled/inspector.html?panel=js_profiler&v8only=1)
+(you may need to open [this
+page](chrome-devtools://devtools/bundled/inspector.html) first).
+It also supports writing callgrind files, which can be viewed using
+[kachegrind](https://kcachegrind.github.io/html/Home.html).
+
+Additionally, support for lldb has been added (by passing the `--use-lldb`
+command line argument). This is experimental and requires the `lldb-mi` executable.
 
 Quick start
 -----------
