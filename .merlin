@@ -1,4 +1,0 @@
-B _build/**
-S src/**
-PKG extlib lwt.ppx lwt ppx_deriving.std ppx_deriving_yojson containers
-FLG -w A-4-40-41-42-44-45-27-32-39

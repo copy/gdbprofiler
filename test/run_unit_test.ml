@@ -1,3 +1,5 @@
+module Gdbmi_proto = Gdb_lib.Gdbmi_proto
+module Cpuprofile = Gdb_lib.Cpuprofile
 
 let make_frame level addr func =
   Gdbmi_proto.{

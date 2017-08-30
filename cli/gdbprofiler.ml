@@ -1,6 +1,12 @@
 open Printf
 module String = ExtLib.String
 
+module Gdb = Gdb_lib.Gdb
+module Gdbmi_proto = Gdb_lib.Gdbmi_proto
+module Gdbmi_types = Gdb_lib.Gdbmi_types
+module Cpuprofile = Gdb_lib.Cpuprofile
+module Callgrind = Gdb_lib.Callgrind
+
 let printfn fmt = ksprintf print_endline fmt
 let eprintfn fmt = ksprintf prerr_endline fmt
 

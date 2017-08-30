@@ -3,7 +3,16 @@ type time = float
 type position_tick = {
   line: int;
   ticks: int;
-} [@@deriving to_yojson]
+}
+
+let rec (position_tick_to_yojson : position_tick -> Yojson.Safe.json) =
+  ((
+      fun x  ->
+        let fields = []  in
+        let fields = ("ticks", ((fun x  -> `Int x) x.ticks)) :: fields  in
+        let fields = ("line", ((fun x  -> `Int x) x.line)) :: fields  in
+        `Assoc fields)
+  [@ocaml.warning "-A"]) 
 
 type fn = {
   function_name: string [@key "functionName"];
@@ -17,7 +26,42 @@ type fn = {
   id: int;
   position_ticks: position_tick list [@key "positionTicks"];
   children: fn list;
-} [@@deriving to_yojson]
+}
+
+let rec (fn_to_yojson : fn -> Yojson.Safe.json) =
+  ((
+      fun x  ->
+        let fields = []  in
+        let fields =
+          ("children",
+            ((fun x  -> `List (List.map (fun x  -> fn_to_yojson x) x))
+               x.children))
+          :: fields  in
+        let fields =
+          ("positionTicks",
+            ((fun x  ->
+                `List (List.map (fun x  -> position_tick_to_yojson x) x))
+               x.position_ticks))
+          :: fields  in
+        let fields = ("id", ((fun x  -> `Int x) x.id)) :: fields  in
+        let fields = ("deoptReason", ((fun x  -> `String x) x.deopt_reason))
+          :: fields  in
+        let fields = ("callUID", ((fun x  -> `Int x) x.call_uid)) :: fields
+           in
+        let fields = ("hitCount", ((fun x  -> `Int x) x.hit_count)) :: fields
+           in
+        let fields = ("columnNumber", ((fun x  -> `Int x) x.column_number))
+          :: fields  in
+        let fields = ("lineNumber", ((fun x  -> `Int x) x.line_number)) ::
+          fields  in
+        let fields = ("url", ((fun x  -> `String x) x.url)) :: fields  in
+        let fields = ("scriptId", ((fun x  -> `String x) x.script_id)) ::
+          fields  in
+        let fields =
+          ("functionName", ((fun x  -> `String x) x.function_name)) :: fields
+           in
+        `Assoc fields)
+  [@ocaml.warning "-A"]) 
 
 type node = {
   function_name: string;
@@ -79,7 +123,30 @@ type t = {
   end_time: float [@key "endTime"];
   samples: int list;
   timestamps: Int64.t list;
-} [@@deriving to_yojson]
+}
+
+let rec (to_yojson : t -> Yojson.Safe.json) =
+  ((
+      fun x  ->
+        let fields = []  in
+        let fields =
+          ("timestamps",
+            ((fun x  ->
+                `List (List.map (fun x  -> `Intlit (Int64.to_string x)) x))
+               x.timestamps))
+          :: fields  in
+        let fields =
+          ("samples",
+            ((fun x  -> `List (List.map (fun x  -> `Int x) x)) x.samples))
+          :: fields  in
+        let fields = ("endTime", ((fun x  -> `Float x) x.end_time)) :: fields
+           in
+        let fields = ("startTime", ((fun x  -> `Float x) x.start_time)) ::
+          fields  in
+        let fields = ("head", ((fun x  -> fn_to_yojson x) x.head)) :: fields
+           in
+        `Assoc fields)
+  [@ocaml.warning "-A"]) 
 
 let lookup_id (table, last_id) name =
   match CCHashtbl.get table name with

@@ -12,7 +12,8 @@ It also supports writing callgrind files, which can be viewed using
 [kachegrind](https://kcachegrind.github.io/html/Home.html).
 
 Additionally, support for lldb has been added (by passing the `--use-lldb`
-command line argument). This is experimental and requires the `lldb-mi` executable.
+command line argument). This is experimental and requires the `lldb-mi`
+executable.
 
 Quick start
 -----------

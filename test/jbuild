@@ -1,0 +1,23 @@
+(jbuild_version 1)
+
+(executables
+ ((libraries (gdb_lib))
+  (modules (run_integration_test))
+  (names (run_integration_test))))
+
+(executables
+ ((libraries (gdb_lib))
+  (modules (run_unit_test))
+  (names (run_unit_test))))
+
+(alias
+ ((name   runtest)
+  (package gdbprofiler)
+  (deps   (run_integration_test.exe))
+  (action (run ${<} ${bin:gdbprofiler}))))
+
+(alias
+ ((name   runtest)
+  (package gdbprofiler)
+  (deps   (run_unit_test.exe))
+  (action (run ${<}))))

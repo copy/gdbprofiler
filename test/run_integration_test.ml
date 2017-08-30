@@ -7,13 +7,13 @@ let rec wait_for_termination ~timeout pid =
   else
     (Unix.sleep 1; wait_for_termination pid ~timeout:(timeout - 1))
 
-let () =
+let run gdbprofiler_path =
   let null = Unix.openfile "/dev/null" [] 0o777 in
   let sleep_pid = Unix.create_process "sleep" [| "sleep"; "99999"; |] null Unix.stdout Unix.stdout in
   let cpuprofile = "/tmp/rmp_integration_test.cpuprofile" in
   let callgrind =  "/tmp/rmp_integration_test.callgrind" in
   let rmp_args = [|
-    "./gdbprofiler.native";
+    "./gdbprofiler";
     "-p"; string_of_int sleep_pid;
     "--cpuprofile"; cpuprofile;
     "--callgrind"; callgrind;
@@ -26,7 +26,7 @@ let () =
   in
   CCFun.finally ~h:delete_temporary_files ~f:begin fun () ->
     print_endline "Now starting integration test. stdout of rmp is shown below";
-    let rmp_pid = Unix.create_process "./gdbprofiler.native" rmp_args rmp_stdin Unix.stdout Unix.stdout in
+    let rmp_pid = Unix.create_process gdbprofiler_path rmp_args rmp_stdin Unix.stdout Unix.stdout in
     print_endline "Sleeping";
     Unix.sleep 5;
     print_endline "Sending enter";
@@ -41,7 +41,14 @@ let () =
     | `Stopped status ->
       assert (CCIO.File.exists cpuprofile);
       let _ : Yojson.Safe.json = Yojson.Safe.from_file cpuprofile in
-      ignore @@ Unix.system "cat /tmp/rmp_integration_test.cpuprofile";
       assert (CCIO.File.exists callgrind);
       assert (status = Unix.WEXITED 0)
   end
+
+let () =
+  match Sys.argv with
+  | [| _; gdbprofiler_path |] ->
+    run gdbprofiler_path
+  | _ ->
+    prerr_endline "Usage: run_integration_test path_to_gdbprofiler";
+    exit 1
