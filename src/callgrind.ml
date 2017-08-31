@@ -2,11 +2,6 @@
 
 let with_addresses = false
 
-let file (frame : Gdbmi_proto.frame) =
-  match frame.fullname, frame.file, frame.from with
-  | (Some f, _, _) | (_, Some f, _) | (_, _, Some f) -> f
-  | _ -> ""
-
 let rec iter_tree f (t : Cpuprofile.node) =
   f t;
   List.iter (fun t' -> iter_tree f t') t.children
