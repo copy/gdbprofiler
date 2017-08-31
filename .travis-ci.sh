@@ -3,6 +3,7 @@ sh .travis-ocaml.sh
 
 eval `opam config env`
 
-opam pin add --yes $(pwd)
+opam pin add $(pwd) --yes --no-action
+opam install gdbprofiler --yes --deps-only
 
 make test
