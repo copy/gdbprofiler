@@ -1,5 +1,4 @@
 open Printf
-module String = ExtLib.String
 
 module Gdb = Gdb_lib.Gdb
 module Gdbmi_proto = Gdb_lib.Gdbmi_proto
@@ -147,7 +146,7 @@ let pmp debugger_type debugger_path pid cpuprofile_file callgrind_file =
 let dump_file file =
   let parse_line s =
     try
-      match String.strip s with
+      match CCString.trim s with
       | "" -> ()
       | s ->
         match Gdb.parse_io s with

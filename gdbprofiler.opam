@@ -12,7 +12,6 @@ install: ["ocaml" "setup.ml" "-install"]
 remove: ["ocamlfind" "remove" "gdbprofiler"]
 depends: [
   "menhir"
-  ("extlib" | "extlib-compat")
   "lwt" {>= "2.4.6"}
   "jbuilder" {build}
   "containers" {>= "0.20"}

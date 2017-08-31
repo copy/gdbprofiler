@@ -1,6 +1,4 @@
-
 open Printf
-open ExtLib
 
 module Types = Gdbmi_types
 module Proto = Gdbmi_proto
@@ -30,7 +28,7 @@ let make_parser f s =
     let descr = match exn with Failure s -> s | exn -> Printexc.to_string exn in
     let tok = Lexing.lexeme lexbuf in
     let tail = Gdbmi_lexer.ruleTail "" lexbuf in
-    raise (Parse_error (s,descr,tok ^ String.slice ~last:32 tail))
+    raise (Parse_error (s,descr,tok ^ tail))
 
 let () =
   Printexc.register_printer @@ function
@@ -63,7 +61,7 @@ let read_input gdb =
     in (* timeout? *)
     log "receive: %s" s;
     record gdb s;
-    match String.strip s with
+    match CCString.trim s with
     | "" -> loop acc
     | {|&"ptrace: Operation not permitted.\n"|} ->
       Lwt.fail Not_permitted
@@ -125,7 +123,7 @@ let mi gdb s args =
   let rec loop () =
     let%lwt r = read_input gdb in (* skip until token matches *)
     match
-      List.filter_map (function Types.Result (Some x,r) when x = token -> Some r | _ -> None) r
+      CCList.filter_map (function Types.Result (Some x,r) when x = token -> Some r | _ -> None) r
     with
     | [] -> loop ()
     | x::_ -> Lwt.return x
@@ -190,7 +188,7 @@ let rec collapse_recursive_frames : Proto.frame list -> Proto.frame list = funct
 
 let run gdb cmd =
   let%lwt r = execute gdb cmd in
-  match List.filter_map (function Types.Result (_,r) -> Some r | _ -> None) r with
+  match CCList.filter_map (function Types.Result (_,r) -> Some r | _ -> None) r with
   | [] -> lwt_fail "no result from %S" cmd
   | _::_::_ -> lwt_fail "multiple results from %S" cmd
   | [Done _] -> Lwt.return ()
@@ -199,13 +197,7 @@ let run gdb cmd =
 
 let run gdb fmt = ksprintf (run gdb) fmt
 
-let replace_all str sub by =
-  let rec loop str =
-    match String.replace ~str ~sub ~by with
-    | true, str -> loop str
-    | false, s -> s
-  in
-  loop str
+let replace_all str sub by = CCString.replace ~which:`All ~sub ~by str
 
 let get_hex = function
   | 'a'..'f' as c -> Some (Char.code c - Char.code 'a' + 10)
@@ -221,13 +213,13 @@ let get_hex2 s =
     None
 
 let unescape s =
-  match String.nsplit s "$" with
+  match CCString.split s ~by:"$" with
   | [] -> assert false
   | head :: tail ->
     let rest = List.map begin fun part ->
         match get_hex2 part with
         | Some n ->
-          String.of_char n ^ String.slice ~first:2 part
+          CCString.of_char n ^ CCString.drop 2 part
         | None ->
           "$" ^ part
       end tail
@@ -238,24 +230,16 @@ let () = assert (unescape "abc" = "abc")
 let () = assert (unescape "abc$20XXX" = "abc XXX")
 
 let is_number s = try ignore (int_of_string s); true with _ -> false
-let truncate_at s sub = try fst @@ String.split s sub with _ -> s
-let drop_prefix s pre =
-  if String.starts_with s pre then String.slice ~first:(String.length pre) s else s
+let truncate_at s sub = match CCString.Split.left s ~by:sub with None -> s | Some (l, _) -> l
+let drop_prefix s pre = match CCString.chop_prefix ~pre s with Some pre -> pre | None -> s
 
 let demangle s =
-  if String.starts_with s "caml" && not (String.starts_with s "caml_") then
+  if CCString.prefix s ~pre:"caml" && not (CCString.prefix s ~pre:"caml_") then
   begin
-    let s = String.slice ~first:4 s in
+    let s = CCString.drop 4 s in
     let s = replace_all s "__" "." in
     let s = unescape s in
-    match List.rev @@ String.nsplit s "_" with
-    | last'::prev::_ when is_number last' ->
-      let last = - (String.length last' + 1) in
-      if String.ends_with prev ".fun" then
-        String.slice s ~last:(last - 4) ^ "#" ^ last'
-      else
-        String.slice s ~last
-    | _ -> s
+    s
   end
   else
     (* get rid of symbol versioning such as 'pthread_cond_wait@@GLIBC_2.3.2' *)
