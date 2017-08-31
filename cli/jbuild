@@ -5,6 +5,5 @@
    (public_name gdbprofiler)
    (modules (gdbprofiler))
    (flags (:standard -w A-4-39-40-41-42-44-45 -warn-error -58 -safe-string))
-   (ocamlopt_flags (:standard -O3))
-   (preprocess (pps (lwt.ppx ppx_driver.runner -no-check)))
+   (preprocess (pps (lwt.ppx)))
    (libraries (gdb_lib))))

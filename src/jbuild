@@ -3,11 +3,9 @@
 (library
   ((name gdb_lib)
    (libraries
-     (lwt.unix lwt.ppx ppx_deriving ppx_deriving.show
-      containers containers.data yojson))
+     (lwt.unix lwt.ppx containers containers.data yojson))
    (flags (:standard -w A-4-39-40-41-42-44-45 -warn-error -58 -safe-string))
-   (ocamlopt_flags (:standard -O3))
-   (preprocess (pps (ppx_deriving.show lwt.ppx ppx_driver.runner -no-check)))))
+   (preprocess (pps (lwt.ppx)))))
 
 (ocamllex (gdbmi_lexer))
 (menhir ((modules (gdbmi_parser))))
