@@ -229,6 +229,7 @@ let unescape s =
 let () = assert (unescape "abc" = "abc")
 let () = assert (unescape "abc$20XXX" = "abc XXX")
 
+let is_number s = try ignore (int_of_string s); true with _ -> false
 let truncate_at s sub = match CCString.Split.left s ~by:sub with None -> s | Some (l, _) -> l
 let drop_prefix s pre = match CCString.chop_prefix ~pre s with Some pre -> pre | None -> s
 
@@ -238,7 +239,13 @@ let demangle s =
     let s = CCString.drop 4 s in
     let s = replace_all s "__" "." in
     let s = unescape s in
-    s
+    match CCString.Split.right s ~by:"_" with
+    | Some (left, suffix) ->
+      if is_number suffix then
+        left
+      else
+        s
+    | None -> s
   end
   else
     (* get rid of symbol versioning such as 'pthread_cond_wait@@GLIBC_2.3.2' *)
