@@ -6,7 +6,7 @@ build:
 test:
 	jbuilder runtest
 
-install:
+install: build
 	jbuilder install
 
 uninstall:
