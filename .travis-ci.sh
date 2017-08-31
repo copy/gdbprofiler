@@ -5,5 +5,4 @@ eval `opam config env`
 
 opam pin add --yes $(pwd)
 
-make
-./run_unit_test.native
+make test
