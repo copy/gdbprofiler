@@ -229,7 +229,6 @@ let unescape s =
 let () = assert (unescape "abc" = "abc")
 let () = assert (unescape "abc$20XXX" = "abc XXX")
 
-let is_number s = try ignore (int_of_string s); true with _ -> false
 let truncate_at s sub = match CCString.Split.left s ~by:sub with None -> s | Some (l, _) -> l
 let drop_prefix s pre = match CCString.chop_prefix ~pre s with Some pre -> pre | None -> s
 

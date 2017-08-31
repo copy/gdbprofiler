@@ -73,7 +73,7 @@ let save_profile records end_time cpuprofile_file callgrind_file =
 
 
 let check_result = function
-  | Gdbmi_types.Done vars -> Lwt.return_unit
+  | Gdbmi_types.Done _vars -> Lwt.return_unit
   | Connected -> Lwt.return_unit
   | OpError (err, _) ->
     begin match err with

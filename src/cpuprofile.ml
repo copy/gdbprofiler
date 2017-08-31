@@ -11,8 +11,7 @@ let rec (position_tick_to_yojson : position_tick -> Yojson.Safe.json) =
         let fields = []  in
         let fields = ("ticks", ((fun x  -> `Int x) x.ticks)) :: fields  in
         let fields = ("line", ((fun x  -> `Int x) x.line)) :: fields  in
-        `Assoc fields)
-  [@ocaml.warning "-A"]) 
+        `Assoc fields))
 
 type fn = {
   function_name: string [@key "functionName"];
@@ -60,8 +59,7 @@ let rec (fn_to_yojson : fn -> Yojson.Safe.json) =
         let fields =
           ("functionName", ((fun x  -> `String x) x.function_name)) :: fields
            in
-        `Assoc fields)
-  [@ocaml.warning "-A"]) 
+        `Assoc fields))
 
 type node = {
   function_name: string;
@@ -145,8 +143,7 @@ let rec (to_yojson : t -> Yojson.Safe.json) =
           fields  in
         let fields = ("head", ((fun x  -> fn_to_yojson x) x.head)) :: fields
            in
-        `Assoc fields)
-  [@ocaml.warning "-A"]) 
+        `Assoc fields))
 
 let lookup_id (table, last_id) name =
   match CCHashtbl.get table name with
@@ -160,14 +157,6 @@ let lookup_id (table, last_id) name =
 
 let create_id_table () =
   Hashtbl.create 1024, ref 0
-
-(* if `pred x` for one element of xs then replace it with `f (Some x)` else append `f None` *)
-let rec update_element_or_add pred f xs =
-  match xs with
-  | [] -> [f None]
-  | x :: xs' ->
-    if pred x then f (Some x) :: xs
-    else x :: update_element_or_add pred f xs'
 
 let of_frames records end_time =
   if records = [] then failwith "Empty records";
