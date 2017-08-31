@@ -15,5 +15,6 @@ depends: [
   "lwt" {>= "2.4.6"}
   "jbuilder" {build}
   "containers" {>= "0.20"}
+  "yojson"
 ]
 available: [ocaml-version >= "4.02.0"]
