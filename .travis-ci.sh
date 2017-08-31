@@ -6,4 +6,4 @@ eval `opam config env`
 opam pin add $(pwd) --yes --no-action
 opam install gdbprofiler --yes --deps-only
 
-make test
+make unit-test
