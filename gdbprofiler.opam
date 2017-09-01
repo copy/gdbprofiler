@@ -9,9 +9,9 @@ dev-repo: "https://github.com/copy/gdbprofiler.git"
 build: [["jbuilder" "build" "-p" name "-j" jobs]]
 build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
 depends: [
-  "menhir"
-  "lwt" {>= "2.4.6"}
   "jbuilder" {build}
+  "menhir" {build}
+  "lwt" {>= "2.4.6"}
   "containers" {>= "0.20"}
   "yojson"
 ]
