@@ -15,6 +15,8 @@ Additionally, support for lldb has been added (by passing the `--use-lldb`
 command line argument). This is experimental and requires the `lldb-mi`
 executable.
 
+gdbprofiler works on OCaml 4.02.3 through 4.06.
+
 Quick start
 -----------
 
@@ -27,10 +29,9 @@ Usage: `gdbprofiler -p <pid> [--use-lldb] [--debugger path] [--cpuprofile path] 
 
 Example:  ```gdbprofiler -p `pidof my_example_program.native` --cpuprofile example.cpuprofile --callgrind callgrind.out```
 
-If you're getting a "not permitted" error on Linux, run the following:
-`su -c 'sysctlkernel.yama.ptrace_scope=0'`
-([https://rajeeshknambiar.wordpress.com/2015/07/16/attaching-debugger-and-ptrace_scope/](more
-infos))
+If you're getting a "not permitted" error on Linux, run the following: `su -c
+'sysctlkernel.yama.ptrace_scope=0'` ([more
+infos](https://rajeeshknambiar.wordpress.com/2015/07/16/attaching-debugger-and-ptrace_scope/))
 
 The output file must have a `.cpuprofile` extension, otherwise Chromium refuses to load it.
 
