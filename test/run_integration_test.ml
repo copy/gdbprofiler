@@ -30,7 +30,7 @@ let run gdbprofiler_path =
     print_endline "Sleeping";
     Unix.sleep 5;
     print_endline "Sending enter";
-    let written = Unix.write rmp_stdin_write "\n" 0 1 in (* send enter to stop *)
+    let written = Unix.write_substring rmp_stdin_write "\n" 0 1 in (* send enter to stop *)
     assert (written = 1);
     print_endline "Killing child";
     Unix.kill sleep_pid 2;
