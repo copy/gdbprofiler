@@ -8,7 +8,7 @@ test:
 	jbuilder build --force @run_integration_test
 
 unit-test:
-	jbuilder --force runtest
+	jbuilder runtest --force
 
 install: build
 	jbuilder install
