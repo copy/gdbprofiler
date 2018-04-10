@@ -4,11 +4,11 @@ build:
 	jbuilder build @install
 
 test:
-	jbuilder runtest
+	jbuilder runtest --force
+	jbuilder build --force @run_integration_test
 
 unit-test:
-	jbuilder build test/run_unit_test.exe
-	./_build/default/test/run_unit_test.exe
+	jbuilder --force runtest
 
 install: build
 	jbuilder install

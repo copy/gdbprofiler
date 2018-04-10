@@ -11,7 +11,7 @@
   (names (run_unit_test))))
 
 (alias
- ((name   runtest)
+ ((name   run_integration_test)
   (package gdbprofiler)
   (deps   (run_integration_test.exe))
   (action (run ${<} ${bin:gdbprofiler}))))
