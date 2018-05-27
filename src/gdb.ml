@@ -94,9 +94,13 @@ let launch ?dump ~debugger () =
       Some (temp, path, ch)
   in
   let gdb = { proc; index = 0; dump; } in
-  let%lwt _greeting = read_input gdb in
-(*   let%lwt _ = execute gdb "shell date" in (* FIXME shell *) *)
-  Lwt.return gdb
+  try%lwt
+    let%lwt _greeting = read_input gdb in Lwt.return (Ok gdb)
+  with
+  | End_of_file ->
+    let%lwt state = Lwt_unix.with_timeout 1.0 (fun () -> gdb.proc#status) in
+    gdb.proc#terminate;
+    Lwt.return (Error state)
 
 let quit gdb =
   let finish_dump () =

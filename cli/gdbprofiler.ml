@@ -84,21 +84,7 @@ let check_result = function
     end
   | Exit -> Lwt.return_unit
 
-
-let pmp debugger_type debugger_path pid cpuprofile_file callgrind_file =
-  log "starting";
-  let debugger = match debugger_type, debugger_path with
-    | `Gdb, None ->
-      [| "gdb"; "--interpreter=mi"; "-n" |]
-    | `Gdb, Some path ->
-      [| path; "--interpreter=mi"; "-n" |]
-    | `Lldb, None ->
-      [| "lldb-mi" |]
-    | `Lldb, Some path ->
-      [| path |]
-  in
-  let%lwt gdb = Gdb.launch ~debugger () in
-  log "launched";
+let run_pmp gdb pid cpuprofile_file callgrind_file =
   begin
     let%lwt result = Gdb.mi gdb "target-attach" [string_of_int pid] in
     let%lwt () = check_result result in
@@ -141,6 +127,31 @@ let pmp debugger_type debugger_path pid cpuprofile_file callgrind_file =
     let end_time = Unix.gettimeofday () in
     save_profile (List.rev !records) end_time cpuprofile_file callgrind_file;
   end [%finally (Gdb.quit gdb)]
+
+
+let pmp debugger_type debugger_path pid cpuprofile_file callgrind_file =
+  log "starting";
+  let debugger = match debugger_type, debugger_path with
+    | `Gdb, None ->
+      [| "gdb"; "--interpreter=mi"; "-n" |]
+    | `Gdb, Some path ->
+      [| path; "--interpreter=mi"; "-n" |]
+    | `Lldb, None ->
+      [| "lldb-mi" |]
+    | `Lldb, Some path ->
+      [| path |]
+  in
+  match%lwt Gdb.launch ~debugger () with
+  | Ok gdb ->
+    log "launched";
+    run_pmp gdb pid cpuprofile_file callgrind_file
+  | Error state ->
+    let state = match state with
+      | WEXITED n -> sprintf "Exited with %d" n
+      | WSIGNALED n -> sprintf "Signaled %d" n
+      | WSTOPPED n -> sprintf "Stopped with %d" n
+    in
+    Lwt_io.printf "Failed to start debugger '%s': %s\n" debugger.(0) state
 
 
 let dump_file file =
