@@ -29,4 +29,4 @@ type t = {
 }
 
 val of_frames : (Gdbmi_proto.frame list * time) list -> time -> t * node
-val to_yojson : t -> Yojson.Safe.json
+val to_yojson : t -> Yojson.Safe.t

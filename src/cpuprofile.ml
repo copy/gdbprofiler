@@ -5,7 +5,7 @@ type position_tick = {
   ticks: int;
 }
 
-let rec (position_tick_to_yojson : position_tick -> Yojson.Safe.json) =
+let rec (position_tick_to_yojson : position_tick -> Yojson.Safe.t) =
   ((
       fun x  ->
         let fields = []  in
@@ -27,7 +27,7 @@ type fn = {
   children: fn list;
 }
 
-let rec (fn_to_yojson : fn -> Yojson.Safe.json) =
+let rec (fn_to_yojson : fn -> Yojson.Safe.t) =
   ((
       fun x  ->
         let fields = []  in
@@ -123,7 +123,7 @@ type t = {
   timestamps: Int64.t list;
 }
 
-let rec (to_yojson : t -> Yojson.Safe.json) =
+let rec (to_yojson : t -> Yojson.Safe.t) =
   ((
       fun x  ->
         let fields = []  in
