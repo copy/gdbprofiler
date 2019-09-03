@@ -1,9 +1,0 @@
-(jbuild_version 1)
-
-(executable
-  ((name gdbprofiler)
-   (public_name gdbprofiler)
-   (modules (gdbprofiler))
-   (flags (:standard -w A-4-39-40-41-42-44-45 -warn-error -58 -safe-string))
-   (preprocess (pps (lwt_ppx)))
-   (libraries (gdb_lib lwt lwt.unix lwt_log lwt_ppx))))
