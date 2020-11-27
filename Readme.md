@@ -31,9 +31,12 @@ Example:  ```gdbprofiler -p `pidof my_example_program.native` --cpuprofile examp
 
 If you're getting a "not permitted" error on Linux, run the following: `su -c
 'sysctlkernel.yama.ptrace_scope=0'` ([more
-infos](https://rajeeshknambiar.wordpress.com/2015/07/16/attaching-debugger-and-ptrace_scope/))
+infos](https://rajeeshknambiar.wordpress.com/2015/07/16/attaching-debugger-and-ptrace_scope/)).
 
 The output file must have a `.cpuprofile` extension, otherwise Chromium refuses to load it.
+
+In recent versions of Chromium the profiler view has moved.
+It can be found in the ... menu on the top right -> More tools -> JavaScript Profiler.
 
 <hr>
 
