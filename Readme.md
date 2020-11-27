@@ -15,7 +15,7 @@ Additionally, support for lldb has been added (by passing the `--use-lldb`
 command line argument). This is experimental and requires the `lldb-mi`
 executable.
 
-gdbprofiler works on OCaml 4.02.3 through 4.06.
+gdbprofiler works on OCaml 4.02.3 and higher.
 
 Quick start
 -----------
