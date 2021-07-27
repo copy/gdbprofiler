@@ -11,19 +11,21 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.03.0"}
-  "dune" {>= "1.4"}
-  "menhir" {build}
+  "dune" {>= "1.11.0"}
+  "menhir" {>= "20180523"}
   "lwt" {>= "3.2.0"}
   "lwt_ppx"
   "lwt_log"
   "containers" {>= "3.0"}
   "containers-data" {>= "3.0"}
-  "yojson"
+  "yojson" {>= "1.6"}
 ]
-synopsis: "gdbprofiler, a profiler for native OCaml and other executables"
-description:
-  "gdbprofiler (aka rich man's profiler) is a gdb-based sampling profiler that uses gdb or lldb"
+synopsis: "A profiler for native OCaml and other executables"
+description: "gdbprofiler (aka rich man's profiler) is a gdb-based sampling profiler that uses gdb or lldb"
 url {
-  src: "https://github.com/copy/gdbprofiler/archive/0.3.tar.gz"
-  checksum: "md5=71ca8954eea13e24c76ad49750900800"
+  src: "https://github.com/copy/gdbprofiler/archive/0.4.tar.gz"
+  checksum: [
+    "md5=c50d10e6f2cad3026c6fb744f28d8da3"
+    "sha512=126dfbe2abacb165537a14a466406af7b666b12ec93ad0a6ca2ee7fe439e6e91f267985554ff7ca8026f7831b058ba936a6f3294a5f3e10366b12fc3ea21817f"
+  ]
 }
