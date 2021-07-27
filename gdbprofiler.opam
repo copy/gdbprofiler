@@ -17,6 +17,7 @@ depends: [
   "lwt_ppx"
   "lwt_log"
   "containers" {>= "3.0"}
+  "containers-data" {>= "3.0"}
   "yojson"
 ]
 synopsis: "gdbprofiler, a profiler for native OCaml and other executables"
