@@ -1,3 +1,13 @@
+gdbprofiler is not maintained anymore. I recommend using
+[perf](https://discuss.ocaml.org/t/ann-perf-demangling-of-ocaml-symbols-a-short-introduction-to-perf/7143)
+or
+[samply](https://github.com/mstange/samply/).
+
+---
+
+Old Readme below.
+
+
 GDB profiler
 ============
 
